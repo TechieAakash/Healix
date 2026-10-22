@@ -1,115 +1,40 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { HeartPulse, Menu, X, ArrowRight, ShieldCheck } from "lucide-react";
-import { Button } from "./Button";
+import { Link } from "react-router-dom";
+import { Menu, X } from "lucide-react";
+import { HealixLogo } from "./HealixLogo";
+
+const links = [
+  { label: "Overview", to: "/#overview" },
+  { label: "Features", to: "/#features" },
+  { label: "AI Assistant", to: "/assistant" },
+  { label: "About", to: "/#about" },
+];
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-md shadow-teal-500/20 group-hover:bg-teal-500 transition-colors">
-            <HeartPulse className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="font-bold text-xl text-slate-900 tracking-tight flex items-center gap-1.5">
-              Healix
-            </span>
-            <p className="text-[11px] text-slate-500 font-medium">
-              Understand your health. Take the next step.
-            </p>
-          </div>
-        </Link>
-
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8">
-          <a
-            href="#features"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-          >
-            Capabilities
-          </a>
-          <a
-            href="#how-it-works"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-          >
-            How It Works
-          </a>
-          <a
-            href="#safety"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-1.5"
-          >
-            <ShieldCheck className="w-4 h-4 text-teal-600" />
-            Safety First
-          </a>
+    <header className="sticky top-0 z-40 border-b border-emerald-100/80 bg-white/95 backdrop-blur-md">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
+        <Link to="/" aria-label="Healix home"><HealixLogo size={30} textClassName="text-lg font-bold tracking-tight text-emerald-950" /></Link>
+        <nav aria-label="Main navigation" className="hidden items-center gap-7 md:flex">
+          {links.map((link, index) => <Link key={link.label} to={link.to} className={`border-b-2 py-[17px] text-[11px] font-medium transition ${index === 0 ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-500 hover:border-emerald-300 hover:text-emerald-800"}`}>{link.label}</Link>)}
         </nav>
-
-        {/* CTA Buttons */}
-        <div className="hidden md:flex items-center gap-3">
-          <Link to="/login">
-            <Button variant="ghost" size="sm">
-              Sign In
-            </Button>
-          </Link>
-          <Link to="/symptom-checker">
-            <Button variant="teal" size="sm" icon={ArrowRight} iconPosition="right">
-              Check My Symptoms
-            </Button>
-          </Link>
+        <div className="hidden items-center gap-2.5 md:flex">
+          <Link to="/login" className="rounded-xl border border-emerald-600 px-4 py-2 text-[11px] font-semibold text-emerald-800 transition hover:bg-emerald-50">Log in</Link>
+          <Link to="/symptom-checker" className="rounded-xl bg-emerald-700 px-4 py-2 text-[11px] font-semibold text-white transition hover:bg-emerald-800">Get Started</Link>
         </div>
-
-        {/* Mobile menu button */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-xl"
-          aria-label="Toggle menu"
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        <button type="button" onClick={() => setMobileMenuOpen((open) => !open)} className="rounded-lg p-2 text-emerald-900 hover:bg-emerald-50 md:hidden" aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobileMenuOpen}>
+          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
-
-      {/* Mobile menu dropdown */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-6 space-y-3">
-          <a
-            href="#features"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-sm font-medium text-slate-700 hover:text-teal-600"
-          >
-            Capabilities
-          </a>
-          <a
-            href="#how-it-works"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-sm font-medium text-slate-700 hover:text-teal-600"
-          >
-            How It Works
-          </a>
-          <a
-            href="#safety"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-sm font-medium text-slate-700 hover:text-teal-600"
-          >
-            Safety First
-          </a>
-          <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
-            <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="outline" className="w-full">
-                Sign In
-              </Button>
-            </Link>
-            <Link to="/symptom-checker" onClick={() => setMobileMenuOpen(false)}>
-              <Button variant="teal" className="w-full">
-                Check My Symptoms
-              </Button>
-            </Link>
-          </div>
+      {mobileMenuOpen && <nav aria-label="Mobile navigation" className="space-y-1 border-t border-emerald-100 bg-white px-5 py-3 md:hidden">
+        {links.map((link) => <Link key={link.label} to={link.to} onClick={() => setMobileMenuOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800">{link.label}</Link>)}
+        <div className="flex gap-2 border-t border-emerald-50 pt-3">
+          <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1 rounded-lg border border-emerald-600 px-3 py-2.5 text-center text-sm font-semibold text-emerald-800">Log in</Link>
+          <Link to="/symptom-checker" onClick={() => setMobileMenuOpen(false)} className="flex-1 rounded-lg bg-emerald-700 px-3 py-2.5 text-center text-sm font-semibold text-white">Get Started</Link>
         </div>
-      )}
+      </nav>}
     </header>
   );
 }

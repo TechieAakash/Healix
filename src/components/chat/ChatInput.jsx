@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Send, Mic, MicOff, Paperclip } from "lucide-react";
+import { Send, Mic, MicOff } from "lucide-react";
 
 export function ChatInput({
   onSendMessage,
@@ -47,12 +47,12 @@ export function ChatInput({
         onClick={toggleVoiceInput}
         className={`p-2.5 rounded-xl transition-all cursor-pointer ${
           isRecording
-            ? "bg-rose-100 text-rose-600 animate-pulse"
-            : "text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+            ? "bg-teal-100 text-teal-600 animate-pulse"
+            : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
         }`}
         title={isRecording ? "Listening... click to stop" : "Use voice input"}
       >
-        {isRecording ? <MicOff className="w-5 h-5 text-rose-600" /> : <Mic className="w-5 h-5" />}
+        {isRecording ? <MicOff className="w-5 h-5 text-teal-600" /> : <Mic className="w-5 h-5" />}
       </button>
 
       {/* Text input */}
@@ -63,14 +63,14 @@ export function ChatInput({
         onKeyDown={handleKeyDown}
         placeholder={isRecording ? "Listening to your voice..." : placeholder}
         disabled={disabled}
-        className="flex-1 text-sm bg-transparent outline-none text-slate-800 placeholder:text-slate-400 py-1.5 px-1"
+        className="flex-1 text-sm bg-transparent outline-none text-slate-800 placeholder:text-slate-500 py-1.5 px-1"
       />
 
       {/* Send button */}
       <button
         type="submit"
         disabled={!input.trim() || disabled}
-        className="p-2.5 rounded-xl bg-slate-900 text-white hover:bg-teal-600 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer shadow-xs"
+        className="p-2.5 rounded-xl bg-slate-900 text-white hover:bg-teal-700 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer shadow-xs"
         title="Send message"
       >
         <Send className="w-4 h-4" />

@@ -78,7 +78,7 @@ async def send_message(
     db: Session = Depends(get_db),
 ):
     service = ChatService(db)
-    msg = await service.send_message(id, current_user.id, req.message)
+    msg = await service.send_message(id, current_user.id, req.get_text())
     return ChatMessageResponse(
         message_id=msg.id,
         role=msg.role,
@@ -96,6 +96,8 @@ import uuid
 
 class DirectChatRequest(BaseModel):
     message: Optional[str] = None
+    content: Optional[str] = None
+    text: Optional[str] = None
     sessionId: Optional[str] = None
     session_id: Optional[str] = None
 
@@ -112,7 +114,7 @@ class DirectChatRequest(BaseModel):
     dependencies=[Depends(chat_rate_limiter)],
 )
 async def direct_chat(req: DirectChatRequest):
-    user_text = req.message or ""
+    user_text = req.message or req.content or req.text or ""
     from app.services.ai.orchestrator import AIOrchestrator
     orchestrator = AIOrchestrator()
     ai_reply = await orchestrator.chat(user_message=user_text, conversation_history=[])

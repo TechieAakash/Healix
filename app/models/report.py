@@ -23,6 +23,8 @@ class Report(Base):
     general_guidance: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     warning_signs: Mapped[List[str]] = mapped_column(JSON, nullable=False, default=list)
     sources: Mapped[List[Any]] = mapped_column(JSON, nullable=False, default=list)
+    reasoning_trace: Mapped[List[Any]] = mapped_column(JSON, nullable=False, default=list)
+    condition_ranking: Mapped[List[Any]] = mapped_column(JSON, nullable=False, default=list)
     
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False

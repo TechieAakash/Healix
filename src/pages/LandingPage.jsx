@@ -1,362 +1,139 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React from "react";
+import { Link } from "react-router-dom";
 import {
-  HeartPulse,
+  Activity,
   ArrowRight,
+  Brain,
+  CheckCircle2,
+  ClipboardList,
+  Heart,
+  MessageCircle,
   ShieldCheck,
   Sparkles,
-  Stethoscope,
-  HelpCircle,
-  AlertTriangle,
-  BookOpen,
-  Activity,
-  CheckCircle2,
-  Clock,
-  Lock,
-  ChevronRight,
-  FileCheck,
-  Send,
+  TrendingUp,
+  Users,
+  Zap,
 } from "lucide-react";
-import { Button } from "../components/common/Button";
-import { Badge } from "../components/common/Badge";
-import { UrgencyIndicator } from "../components/common/UrgencyIndicator";
-import { motion } from "framer-motion";
+import { HealixLogo } from "../components/common/HealixLogo";
+
+const features = [
+  {
+    icon: MessageCircle,
+    title: "AI Health Assistant",
+    description: "Get answers to health questions and practical guidance, available whenever you need it.",
+    to: "/assistant",
+  },
+  {
+    icon: ClipboardList,
+    title: "Health Assessment",
+    description: "Check your symptoms with a guided intake and clear, safety-first next steps.",
+    to: "/symptom-checker",
+  },
+  {
+    icon: TrendingUp,
+    title: "Health Insights",
+    description: "See patterns in your health information and follow changes over time.",
+    to: "/insights",
+  },
+  {
+    icon: Heart,
+    title: "Personalized Care Plans",
+    description: "Build healthier routines with suggestions shaped around your goals and habits.",
+    to: "/care-plan",
+  },
+];
+
+function DashboardPreview() {
+  return (
+    <div className="relative mx-auto w-full max-w-[650px]">
+      <div className="absolute -inset-8 rounded-[3rem] bg-emerald-200/50 blur-3xl" />
+      <div className="absolute -left-8 top-12 hidden h-56 w-24 -rotate-12 rounded-full bg-emerald-100/90 blur-xl lg:block" />
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-white/95 p-2 shadow-[0_28px_80px_-28px_rgba(5,100,75,0.35)] sm:p-3">
+        <div className="flex items-center gap-1.5 border-b border-emerald-50 px-2 pb-2">
+          <span className="h-2 w-2 rounded-full bg-rose-400" />
+          <span className="h-2 w-2 rounded-full bg-amber-400" />
+          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <span className="ml-2 text-[10px] font-medium text-slate-400">Healix · Health overview</span>
+        </div>
+        <div className="grid min-h-[320px] grid-cols-[112px_1fr] sm:grid-cols-[138px_1fr]">
+          <aside className="flex flex-col border-r border-emerald-50 px-2 py-3 sm:px-3">
+            <HealixLogo size={22} textClassName="text-sm font-bold text-emerald-950" />
+            <div className="mt-5 space-y-1 text-[10px] font-medium text-slate-500">
+              <div className="rounded-lg bg-emerald-50 px-2 py-2 text-emerald-800"><Activity className="mr-1 inline h-3 w-3" /> Overview</div>
+              <div className="px-2 py-2"><ClipboardList className="mr-1 inline h-3 w-3" /> Assessment</div>
+              <div className="px-2 py-2"><MessageCircle className="mr-1 inline h-3 w-3" /> Assistant</div>
+              <div className="px-2 py-2"><Heart className="mr-1 inline h-3 w-3" /> Care plan</div>
+            </div>
+            <div className="mt-auto rounded-lg bg-emerald-50/80 p-2 text-[9px] text-emerald-900">
+              <span className="font-semibold">Your health, in focus</span><br />Private and personal
+            </div>
+          </aside>
+          <div className="min-w-0 p-3 sm:p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div><p className="text-[9px] font-medium text-slate-400">YOUR OVERVIEW</p><h2 className="mt-1 text-sm font-bold text-slate-900 sm:text-base">A clearer view of your health</h2></div>
+              <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] text-emerald-800">Today</span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[[Heart, "Heart rate", "72 bpm"], [Activity, "SpO₂", "98%"], [Zap, "Sleep", "7h 42m"], [TrendingUp, "Steps", "8,432"]].map(([Icon, label, value]) => (
+                <div key={label} className="rounded-xl border border-emerald-100/90 bg-white p-2 sm:p-2.5">
+                  <Icon className="h-3.5 w-3.5 text-emerald-700" />
+                  <p className="mt-2 text-[9px] text-slate-400">{label}</p>
+                  <p className="text-xs font-bold text-slate-800 sm:text-sm">{value}</p>
+                </div>
+              ))}
+            </div>
+            <Link to="/assistant" className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 p-3 transition hover:from-emerald-100 hover:to-teal-100">
+              <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-emerald-700"><Brain className="h-4 w-4" /></span><div><p className="text-[10px] font-bold text-slate-800">Health Assistant</p><p className="text-[9px] text-slate-500">Ask a question or explore guidance</p></div></div>
+              <span className="rounded-full bg-emerald-700 px-2.5 py-1 text-[9px] font-semibold text-white">Chat now <ArrowRight className="ml-1 inline h-3 w-3" /></span>
+            </Link>
+            <div className="mt-3 rounded-xl border border-emerald-100/90 p-3">
+              <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold text-slate-800">Health trends</p><p className="text-[9px] text-slate-400">Your activity over time</p></div><span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-semibold text-emerald-700">View insights</span></div>
+              <svg viewBox="0 0 440 90" className="mt-2 h-16 w-full" role="img" aria-label="Illustrative upward health trend">
+                <defs><linearGradient id="trendFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#10b981" stopOpacity=".2"/><stop offset="1" stopColor="#10b981" stopOpacity="0"/></linearGradient></defs>
+                <path d="M0 69 L40 58 L80 62 L120 43 L160 49 L200 34 L240 42 L280 24 L320 30 L360 12 L400 20 L440 8 L440 90 L0 90 Z" fill="url(#trendFill)" />
+                <path d="M0 69 L40 58 L80 62 L120 43 L160 49 L200 34 L240 42 L280 24 L320 30 L360 12 L400 20 L440 8" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <div className="flex justify-between text-[8px] text-slate-400"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function LandingPage() {
-  const navigate = useNavigate();
-  const [heroInput, setHeroInput] = useState("Headache and persistent fatigue after long computer work");
-
-  const handleQuickCheck = (e) => {
-    e.preventDefault();
-    navigate(`/symptom-checker?initial=${encodeURIComponent(heroInput)}`);
-  };
-
-  const features = [
-    {
-      icon: Stethoscope,
-      title: "AI Symptom Analysis",
-      description:
-        "Describe your symptoms in natural language. Our clinical reasoning engine organizes patterns without making premature assumptions.",
-    },
-    {
-      icon: HelpCircle,
-      title: "Smart Follow-up Questions",
-      description:
-        "Dynamic, context-aware inquiries refine symptom duration, severity, and location—mirroring a medical intake interview.",
-    },
-    {
-      icon: AlertTriangle,
-      title: "Safety-First Triage",
-      description:
-        "Continuous red-flag monitoring prioritizes genuine emergencies, directing you to immediate emergency care when warning signs appear.",
-    },
-    {
-      icon: BookOpen,
-      title: "Evidence-Grounded Information",
-      description:
-        "Every health insight is anchored in peer-reviewed clinical knowledge bases (Mayo Clinic, WHO, NHS) with transparent citations.",
-    },
-  ];
-
-  const workflowSteps = [
-    {
-      step: "01",
-      title: "Describe your symptoms",
-      desc: "Speak or type in everyday plain language. Add structured symptoms like headache, fever, or fatigue with one tap.",
-    },
-    {
-      step: "02",
-      title: "Answer a few questions",
-      desc: "Clarify timeline, severity, and specific body zones through a simple, guided conversational questionnaire.",
-    },
-    {
-      step: "03",
-      title: "Healix analyzes relevant information",
-      desc: "Our RAG engine cross-references clinical literature to synthesize potential factors and rule out red flags.",
-    },
-    {
-      step: "04",
-      title: "Review your next-step guidance",
-      desc: "Receive clear, responsible urgency recommendations: self-care tips, warning signs to monitor, and printable doctor reports.",
-    },
-  ];
-
   return (
-    <div className="space-y-24 pb-16">
-      {/* ================= HERO SECTION ================= */}
-      <section className="relative pt-12 sm:pt-20 lg:pt-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        {/* Subtle decorative glow */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-96 h-96 bg-teal-200/20 blur-3xl rounded-full pointer-events-none -z-10" />
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-          {/* Left Column: Headlines & CTAs */}
-          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200/80 text-teal-800 text-xs font-semibold">
-              <ShieldCheck className="w-4 h-4 text-teal-600" />
-              <span>Evidence-Grounded AI Health Triage</span>
+    <div className="bg-white text-slate-900">
+      <section id="overview" className="relative overflow-hidden bg-gradient-to-br from-[#f5fffc] via-white to-[#e9faf5]">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-12 sm:px-8 sm:py-16 lg:grid-cols-2 lg:gap-12 lg:px-10 lg:py-12">
+          <div className="relative z-10 text-center lg:text-left">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1.5 text-[11px] font-semibold text-emerald-800"><Sparkles className="h-3.5 w-3.5" /> A smarter health companion</div>
+            <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight text-slate-950 sm:text-5xl lg:text-[3.5rem]">Better Health.<br /><span className="text-emerald-800">Brighter You.</span></h1>
+            <p className="mx-auto mt-5 max-w-lg text-sm leading-6 text-slate-600 sm:text-base lg:mx-0">Get health insights, understand symptoms, and discover practical next steps—all in one place.</p>
+            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
+              <Link to="/symptom-checker" className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800">Get Started <ArrowRight className="h-4 w-4" /></Link>
+              <a href="#features" className="inline-flex items-center justify-center rounded-full border border-emerald-700 px-6 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50">Explore Features</a>
             </div>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.1]">
-              Understand your symptoms. <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-700 via-teal-600 to-slate-900">
-                Know your next step.
-              </span>
-            </h1>
-
-            <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              An AI-powered health assistant that helps you understand symptoms, identify warning signs, and find reliable health information—supporting, not replacing, professional care.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
-              <Link to="/symptom-checker" className="w-full sm:w-auto">
-                <Button
-                  variant="teal"
-                  size="lg"
-                  className="w-full sm:w-auto"
-                  icon={ArrowRight}
-                  iconPosition="right"
-                >
-                  Check My Symptoms
-                </Button>
-              </Link>
-              <Link to="/assistant" className="w-full sm:w-auto">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                  Explore Healix Assistant
-                </Button>
-              </Link>
-            </div>
-
-            <div className="pt-6 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-slate-500">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Zero diagnostic claims</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-teal-600" />
-                <span>Private & Encrypted</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <FileCheck className="w-4 h-4 text-slate-700" />
-                <span>Curated medical citations</span>
-              </div>
+            <div className="mx-auto mt-8 flex max-w-md items-center justify-center divide-x divide-emerald-200 text-left lg:mx-0 lg:justify-start">
+              {[[Users, "10K+", "Active users"], [CheckCircle2, "4.8/5", "App rating"], [Zap, "24/7", "Health support"]].map(([Icon, value, label]) => <div key={label} className="flex flex-1 items-center gap-2 px-3 first:pl-0 last:pr-0"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800"><Icon className="h-4 w-4" /></span><span><strong className="block text-xs font-bold text-slate-800">{value}</strong><span className="text-[9px] text-slate-500 sm:text-[10px]">{label}</span></span></div>)}
             </div>
           </div>
-
-          {/* Right Column: Hero Visual Card (Polished interactive preview) */}
-          <div className="lg:col-span-6">
-            <div className="relative bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8 space-y-6">
-              {/* Card top bar */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-3 h-3 rounded-full bg-rose-400" />
-                  <div className="w-3 h-3 rounded-full bg-amber-400" />
-                  <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                  <span className="text-xs font-semibold text-slate-500 ml-2">
-                    Live Symptom Assessment Preview
-                  </span>
-                </div>
-                <Badge variant="teal" dot>
-                  Safety Engine Online
-                </Badge>
-              </div>
-
-              {/* Symptom input preview */}
-              <form onSubmit={handleQuickCheck} className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
-                  Describe what you're experiencing:
-                </label>
-                <div className="flex items-center gap-2 bg-slate-50 rounded-2xl border border-slate-200 p-2 focus-within:border-teal-600 focus-within:bg-white transition-all">
-                  <input
-                    type="text"
-                    value={heroInput}
-                    onChange={(e) => setHeroInput(e.target.value)}
-                    className="flex-1 bg-transparent px-3 text-sm text-slate-800 outline-none"
-                    placeholder="E.g., headache since yesterday and dry cough"
-                  />
-                  <Button variant="teal" size="sm" type="submit" icon={Send}>
-                    Analyze
-                  </Button>
-                </div>
-              </form>
-
-              {/* AI Processing indicator simulation */}
-              <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3">
-                  <span className="w-2.5 h-2.5 rounded-full bg-teal-600 animate-ping" />
-                  <span className="text-slate-700 font-medium">
-                    AI Triage: Cross-referencing clinical sources (Mayo Clinic / WHO)
-                  </span>
-                </div>
-                <span className="text-teal-700 font-semibold">Active RAG</span>
-              </div>
-
-              {/* Urgency indicator preview */}
-              <UrgencyIndicator
-                level="routine"
-                title="Routine Care Recommended"
-                description="Reported indicators align with non-urgent postural strain. Hydration and screen-break hygiene suggested."
-                compact={false}
-              />
-
-              {/* Health insight card */}
-              <div className="p-4 rounded-2xl bg-teal-50/60 border border-teal-200/70 flex items-start gap-3">
-                <Sparkles className="w-5 h-5 text-teal-700 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-bold text-teal-950 uppercase tracking-wider">
-                    Evidence-Grounded Observation
-                  </h4>
-                  <p className="text-xs text-teal-900 mt-1 leading-relaxed">
-                    "Tension-type headaches and eye strain often correlate with sustained cervical posture. Discuss persistent symptoms with your doctor."
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div className="relative py-2 sm:px-3"><DashboardPreview /></div>
         </div>
       </section>
 
-      {/* ================= FEATURE SECTION ================= */}
-      <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <Badge variant="teal">Capabilities</Badge>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Your health, understood.
-          </h2>
-          <p className="text-base text-slate-600 leading-relaxed">
-            Healix transforms ambiguous discomfort into structured, reliable clinical information with zero guesswork and strict medical boundaries.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feat) => {
-            const Icon = feat.icon;
-            return (
-              <div
-                key={feat.title}
-                className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mb-5 border border-teal-100">
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 mb-2">
-                    {feat.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    {feat.description}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      <section id="features" className="mx-auto grid max-w-7xl gap-4 px-5 py-8 sm:grid-cols-2 sm:px-8 sm:py-10 lg:grid-cols-4 lg:px-10">
+        {features.map(({ icon: Icon, title, description, to }) => <Link key={title} to={to} className="group flex min-h-[185px] flex-col rounded-xl border border-emerald-100 bg-white p-5 transition hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-900/5"><span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition group-hover:bg-emerald-100"><Icon className="h-5 w-5" /></span><h2 className="text-sm font-bold text-emerald-950">{title}</h2><p className="mt-2 flex-1 text-xs leading-5 text-slate-500">{description}</p><ArrowRight className="mt-3 h-4 w-4 text-emerald-800 transition group-hover:translate-x-1" /></Link>)}
       </section>
 
-      {/* ================= HOW IT WORKS ================= */}
-      <section id="how-it-works" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-slate-900 rounded-3xl text-white p-8 sm:p-12 lg:p-16 relative overflow-hidden">
-          <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
-            <span className="text-xs uppercase font-bold tracking-wider text-teal-400">
-              Clear 4-Step Process
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              How Healix Works
-            </h2>
-            <p className="text-sm text-slate-400">
-              From first symptom to clear clinical next steps in under 3 minutes.
-            </p>
+      <section id="about" className="bg-gradient-to-r from-[#f2fcf9] via-[#f8fffd] to-[#effbf7] px-5 py-10 sm:px-8 sm:py-12">
+        <div className="mx-auto max-w-6xl">
+          <div className="text-center"><span className="rounded-full border border-emerald-100 bg-white px-3 py-1 text-[10px] font-semibold text-emerald-700">How it works</span><h2 className="mt-3 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Your health journey, <span className="text-emerald-800">simplified</span></h2></div>
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            {[[ClipboardList, "Assess", "Share what you’re experiencing and complete a guided assessment."], [Brain, "Understand", "Get clear, safety-first information and personalized insights."], [TrendingUp, "Improve", "Explore care guidance and build healthier habits over time."]].map(([Icon, title, description], index) => <div key={title} className="flex items-start gap-3 rounded-xl border border-emerald-100/80 bg-white/70 p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-900">{index + 1}</span><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700"><Icon className="h-4 w-4" /></span><div><h3 className="text-sm font-bold text-slate-900">{title}</h3><p className="mt-1 text-xs leading-5 text-slate-500">{description}</p></div><ArrowRight className="mt-2 hidden h-4 w-4 shrink-0 text-emerald-700 md:block" /></div>)}
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-            {workflowSteps.map((step) => (
-              <div
-                key={step.step}
-                className="bg-slate-800/80 rounded-2xl p-6 border border-slate-700/80 flex flex-col justify-between"
-              >
-                <div>
-                  <span className="text-2xl font-black text-teal-400 font-mono">
-                    {step.step}
-                  </span>
-                  <h3 className="text-base font-bold text-white mt-3 mb-2">
-                    {step.title}
-                  </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {step.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-12 text-center">
-            <Link to="/symptom-checker">
-              <Button variant="teal" size="lg" icon={ArrowRight} iconPosition="right">
-                Start Your Free Symptom Check
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= BUILT WITH SAFETY IN MIND ================= */}
-      <section id="safety" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-teal-50/70 rounded-3xl border border-teal-200/90 p-8 sm:p-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-7 space-y-4">
-              <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-800">
-                <ShieldCheck className="w-5 h-5 text-teal-600" />
-                <span>Safety & Clinical Responsibility</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                Built with safety in mind. Not a doctor.
-              </h2>
-              <p className="text-sm text-slate-700 leading-relaxed">
-                Healix provides health information and triage support, not medical diagnosis. We believe AI in healthcare should be a collaborative bridge between patients and clinicians, not an overconfident diagnostic tool.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div className="p-4 bg-white rounded-2xl border border-teal-100 shadow-2xs">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase">
-                    Red-Flag Interception
-                  </h4>
-                  <p className="text-xs text-slate-600 mt-1">
-                    Cardiopulmonary and acute neurological cues instantly trigger emergency priority screens with direct hotlines.
-                  </p>
-                </div>
-                <div className="p-4 bg-white rounded-2xl border border-teal-100 shadow-2xs">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase">
-                    Zero Hallucination Tolerance
-                  </h4>
-                  <p className="text-xs text-slate-600 mt-1">
-                    Guidance is restricted to verified clinical sources like Mayo Clinic, NHS, and WHO guidelines.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-teal-200 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Clinical Safety Checklist
-              </h3>
-              <ul className="space-y-3 text-xs text-slate-600">
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>Always phrases conditions as "possibilities to discuss with a doctor"</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>Provides printable doctor summaries formatted for appointments</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>Never hides emergency guidance behind registration or paywalls</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>End-to-end encrypted health history with full deletion control</span>
-                </li>
-              </ul>
-            </div>
-          </div>
+          <div id="safety" className="mt-7 flex flex-col items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-white/70 px-4 py-3 text-center sm:flex-row sm:text-left"><p className="flex items-center gap-2 text-xs text-slate-600"><ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" /> Healix offers health information and triage support; it does not replace a qualified clinician.</p><Link to="/symptom-checker" className="shrink-0 text-xs font-semibold text-emerald-800 hover:text-emerald-950">Start a symptom check <ArrowRight className="ml-1 inline h-3 w-3" /></Link></div>
         </div>
       </section>
     </div>

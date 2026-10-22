@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { assessmentService } from "../services/assessmentService";
 import { authService } from "../services/authService";
-import { ReportSection } from "../components/reports/ReportSection";
 import { UrgencyIndicator } from "../components/common/UrgencyIndicator";
 import { Button } from "../components/common/Button";
 import {
@@ -10,31 +9,41 @@ import {
   Download,
   ArrowLeft,
   HeartPulse,
-  ShieldCheck,
-  Calendar,
-  User,
-  FileText,
   Activity,
   AlertTriangle,
-  Info,
   CheckCircle2,
 } from "lucide-react";
 
 export function ReportPage() {
   const { id } = useParams();
   const [assessment, setAssessment] = useState(null);
-  const [user, setUser] = useState(null);
+  const [user] = useState(() => authService.getCurrentUser());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUser(authService.getCurrentUser());
-    const data = assessmentService.getAssessmentById(id);
-    setAssessment(data);
+    let isMounted = true;
+    async function fetchReport() {
+      setLoading(true);
+      try {
+        const data = await assessmentService.getAssessmentById(id);
+        if (isMounted) setAssessment(data);
+      } catch (err) {
+        console.error("Failed to load report assessment:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    fetchReport();
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
-  if (!assessment) {
+  if (loading || !assessment) {
     return (
-      <div className="max-w-3xl mx-auto py-12 text-center text-slate-500">
-        Loading printable medical summary...
+      <div className="max-w-3xl mx-auto py-16 text-center text-slate-500 space-y-3">
+        <div className="w-8 h-8 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs">Preparing printable medical summary...</p>
       </div>
     );
   }
@@ -70,7 +79,7 @@ export function ReportPage() {
             Download PDF
           </Button>
           <Button
-            variant="teal"
+            variant="primary"
             size="sm"
             onClick={handlePrint}
             icon={Printer}
@@ -86,7 +95,7 @@ export function ReportPage() {
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b-2 border-slate-900 pb-6">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white">
+              <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center text-white">
                 <HeartPulse className="w-5 h-5" />
               </div>
               <span className="font-extrabold text-2xl tracking-tight text-slate-900">
@@ -102,43 +111,43 @@ export function ReportPage() {
           </div>
 
           <div className="text-left sm:text-right text-xs space-y-1">
-            <p className="font-mono text-slate-400">REF: {assessment.id}</p>
+            <p className="font-mono text-slate-500">REF: {assessment.id}</p>
             <p className="text-slate-600">
               Generated: <span className="font-semibold text-slate-900">{assessment.date}</span>
             </p>
-            <p className="text-teal-700 font-semibold">Status: Intake Completed</p>
+            <p className="text-emerald-700 font-semibold">Status: Intake Completed</p>
           </div>
         </div>
 
         {/* Section 1: Patient-Provided Information */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
           <div>
-            <span className="text-slate-400 block font-medium">Patient Name</span>
-            <span className="font-bold text-slate-900 mt-0.5 block">{user?.fullName || "Aakash Sharma"}</span>
+            <span className="text-slate-500 block font-medium">Patient Name</span>
+            <span className="font-bold text-slate-900 mt-0.5 block">{user?.fullName || user?.name || "Krish Alagh"}</span>
           </div>
           <div>
-            <span className="text-slate-400 block font-medium">Date of Birth</span>
-            <span className="font-semibold text-slate-800 mt-0.5 block">{user?.dateOfBirth || "1996-08-14"}</span>
+            <span className="text-slate-500 block font-medium">Date of Birth</span>
+            <span className="font-semibold text-slate-800 mt-0.5 block">{user?.dateOfBirth || "2006-01-15"}</span>
           </div>
           <div>
-            <span className="text-slate-400 block font-medium">Primary Symptom</span>
+            <span className="text-slate-500 block font-medium">Primary Symptom</span>
             <span className="font-semibold text-slate-800 mt-0.5 block">{assessment.primarySymptom}</span>
           </div>
           <div>
-            <span className="text-slate-400 block font-medium">Emergency Contact</span>
-            <span className="font-semibold text-slate-800 mt-0.5 block">{user?.emergencyContact?.name || "Priya Sharma"}</span>
+            <span className="text-slate-500 block font-medium">Emergency Contact</span>
+            <span className="font-semibold text-slate-800 mt-0.5 block">{user?.emergencyContact?.name || "Dr. Neha Sharma"}</span>
           </div>
         </div>
 
         {/* Section 2: Symptoms & Timeline */}
         <div className="space-y-3">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-teal-600" />
+            <Activity className="w-4 h-4 text-emerald-700" />
             1. Reported Symptoms & Timeline
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div className="p-3 bg-white border border-slate-200 rounded-xl">
-              <span className="text-slate-400 block">Symptom Cluster</span>
+              <span className="text-slate-500 block">Symptom Cluster</span>
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {assessment.symptoms?.map((s, i) => (
                   <span key={i} className="px-2 py-0.5 bg-slate-100 font-semibold rounded text-slate-800">
@@ -148,13 +157,13 @@ export function ReportPage() {
               </div>
             </div>
             <div className="p-3 bg-white border border-slate-200 rounded-xl">
-              <span className="text-slate-400 block">Onset & Duration</span>
+              <span className="text-slate-500 block">Onset & Duration</span>
               <span className="font-semibold text-slate-800 mt-1 block">
                 {assessment.duration || "Recent"} (Frequency: {assessment.frequency || "Intermittent"})
               </span>
             </div>
             <div className="p-3 bg-white border border-slate-200 rounded-xl">
-              <span className="text-slate-400 block">Reported Severity</span>
+              <span className="text-slate-500 block">Reported Severity</span>
               <span className="font-semibold text-slate-800 mt-1 block">
                 {assessment.severity || "Mild to Moderate"}
               </span>
@@ -166,7 +175,7 @@ export function ReportPage() {
         {assessment.followUpSummary && assessment.followUpSummary.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-teal-600" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-700" />
               2. Clinical Intake Responses
             </h3>
             <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden text-xs">
@@ -185,7 +194,7 @@ export function ReportPage() {
         {/* Section 4: Urgency Assessment */}
         <div className="space-y-3">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-teal-600" />
+            <AlertTriangle className="w-4 h-4 text-emerald-700" />
             3. Urgency Guidance Level
           </h3>
           <UrgencyIndicator
@@ -205,7 +214,7 @@ export function ReportPage() {
               <div key={idx} className="p-4 border border-slate-200 rounded-xl text-xs space-y-1.5">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-slate-900 text-sm">{exp.title}</h4>
-                  <span className="text-[11px] font-semibold text-teal-700 px-2 py-0.5 bg-teal-50 rounded border border-teal-200">
+                  <span className="text-[11px] font-semibold text-emerald-700 px-2 py-0.5 bg-emerald-50 rounded border border-emerald-200">
                     {exp.matchLevel}
                   </span>
                 </div>
@@ -219,6 +228,38 @@ export function ReportPage() {
             ))}
           </div>
         </div>
+
+        {assessment.conditionRanking?.length > 0 && (
+          <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 space-y-3 text-xs">
+            <h4 className="font-bold text-emerald-950">Synthetic dataset pattern matches</h4>
+            <p className="text-slate-600">These are matches to synthetic DDXPlus examples, not diagnoses. Safety guidance determines urgency.</p>
+            <ol className="space-y-2">
+              {assessment.conditionRanking.map((item, idx) => (
+                <li key={`${item.condition}-${idx}`} className="flex items-center justify-between gap-3 rounded-lg bg-white p-3">
+                  <span className="font-medium text-slate-800">{idx + 1}. {item.condition}</span>
+                  <span className="shrink-0 text-emerald-800">{Math.round(item.probability * 100)}% dataset match · {item.confidence_band}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {/* Explainable safety-rule trace */}
+        {assessment.reasoningTrace?.length > 0 && (
+          <div className="p-4 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-2 text-xs">
+            <h4 className="font-bold text-amber-950 uppercase tracking-wider">Why this was flagged</h4>
+            <ul className="space-y-2 text-slate-700">
+              {assessment.reasoningTrace.map((item, idx) => (
+                <li key={`${item.rule_id}-${idx}`}>
+                  <span className="font-semibold">{item.rule_id}:</span> {item.conclusion}
+                  <span className="block text-[11px] text-slate-500">
+                    Matched: {(item.matched_facts || []).map((fact) => String(fact.value).replaceAll("_", " ")).join(", ")}. {item.source} ({item.reference})
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Section 6: Warning Signs & Red Flags */}
         <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-2 text-xs">
@@ -245,7 +286,7 @@ export function ReportPage() {
 
         {/* Legal Disclaimer Box */}
         <div className="p-4 bg-slate-100 rounded-xl text-[11px] text-slate-500 leading-relaxed border border-slate-200">
-          <strong>LEGAL & CLINICAL NOTICE:</strong> This document was prepared by Healix, an AI-powered health informational triage tool. This summary does not constitute an official diagnosis, clinical evaluation, or prescription. Please present this summary to your doctor or licensed healthcare practitioner for professional examination.
+          <strong>HEALTH INFORMATION NOTICE:</strong> Healix provides health information and triage guidance, not a medical diagnosis, clinical evaluation, or prescription. Please discuss this summary with a licensed healthcare professional.
         </div>
       </div>
     </div>

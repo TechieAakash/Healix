@@ -1,290 +1,308 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
-import { assessmentService } from "../services/assessmentService";
-import { Button } from "../components/common/Button";
-import { Card, CardHeader } from "../components/common/Card";
-import { HealthMetricCard } from "../components/dashboard/HealthMetricCard";
-import { AssessmentCard } from "../components/dashboard/AssessmentCard";
-import { HealthActivityChart } from "../components/dashboard/HealthActivityChart";
-import { HealthInsightsCard } from "../components/dashboard/HealthInsightsCard";
-import { TriageStatusModal } from "../components/dashboard/TriageStatusModal";
-import { ClinicalSourcesModal } from "../components/dashboard/ClinicalSourcesModal";
-import { SkeletonLoader } from "../components/common/SkeletonLoader";
 import {
-  Stethoscope,
-  ArrowRight,
-  ShieldCheck,
+  Heart,
+  Droplet,
+  Moon,
+  Footprints,
+  Bot,
+  ClipboardPen,
+  FileText,
   Activity,
-  Calendar,
-  Sparkles,
-  BotMessageSquare,
-  History,
-  Clock,
   HeartPulse,
+  X,
+  CheckCircle2,
 } from "lucide-react";
+import { AiBotIllustration } from "../components/dashboard/AiBotIllustration";
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [assessments, setAssessments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(authService.getCurrentUser());
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [metricUpdates, setMetricUpdates] = useState({
+    heartRate: "72",
+    spo2: "98",
+    sleep: "7h 42m",
+    steps: "8,432",
+    weight: "72",
+  });
+  const [updateSavedToast, setUpdateSavedToast] = useState(false);
 
-  // Interactive modal states for metric cards
-  const [showTriageModal, setShowTriageModal] = useState(false);
-  const [showSourcesModal, setShowSourcesModal] = useState(false);
+  const handleSaveMetrics = (e) => {
+    e.preventDefault();
+    const updatedUser = {
+      ...user,
+      metrics: {
+        ...user.metrics,
+        heartRate: `${metricUpdates.heartRate} bpm`,
+        spo2: `${metricUpdates.spo2}%`,
+        sleep: metricUpdates.sleep,
+        steps: metricUpdates.steps,
+        weight: `${metricUpdates.weight} kg`,
+      },
+    };
+    authService.updateProfile(updatedUser);
+    setUser(updatedUser);
+    setShowUpdateModal(false);
+    setUpdateSavedToast(true);
+    setTimeout(() => setUpdateSavedToast(false), 2500);
+  };
 
-  useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
-    const data = assessmentService.getAllAssessments();
-    setAssessments(data);
-    setLoading(false);
-  }, []);
+  const metrics = [
+    {
+      id: "heart-rate",
+      title: "Heart Rate",
+      value: user?.metrics?.heartRate || "72 bpm",
+      subtext: user?.metrics?.heartRateRange || "Normal range: 60 - 100",
+      icon: Heart,
+      iconColor: "text-emerald-700",
+      iconBg: "bg-emerald-50",
+    },
+    {
+      id: "spo2",
+      title: "SpO2",
+      value: user?.metrics?.spo2 || "98%",
+      subtext: user?.metrics?.spo2Range || "Normal range: 95 - 100",
+      icon: Droplet,
+      iconColor: "text-emerald-700",
+      iconBg: "bg-emerald-50",
+    },
+    {
+      id: "sleep",
+      title: "Sleep",
+      value: user?.metrics?.sleep || "7h 42m",
+      subtext: user?.metrics?.sleepSub || "Last night",
+      icon: Moon,
+      iconColor: "text-emerald-700",
+      iconBg: "bg-emerald-50",
+    },
+    {
+      id: "steps",
+      title: "Steps",
+      value: user?.metrics?.steps || "8,432",
+      subtext: user?.metrics?.stepsSub || "Today",
+      icon: Footprints,
+      iconColor: "text-emerald-700",
+      iconBg: "bg-emerald-50",
+    },
+  ];
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <SkeletonLoader type="text" count={3} />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <SkeletonLoader type="card" count={3} />
-        </div>
-      </div>
-    );
-  }
-
-  const latestAssessment = assessments[0];
-  const previousAssessments = assessments.slice(1, 4);
+  const quickActions = [
+    {
+      label: "Log Symptoms",
+      desc: "Record current symptoms",
+      icon: ClipboardPen,
+      onClick: () => navigate("/symptom-checker"),
+    },
+    {
+      label: "View Reports",
+      desc: "Check lab results and summary",
+      icon: FileText,
+      onClick: () => navigate("/reports"),
+    },
+    {
+      label: "Update Health Data",
+      desc: "Vitals and activity check-in",
+      icon: Activity,
+      onClick: () => setShowUpdateModal(true),
+    },
+    {
+      label: "Build Care Plan",
+      desc: "Custom daily wellness goals",
+      icon: HeartPulse,
+      onClick: () => navigate("/care-plan"),
+    },
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* ================= GREETING HEADER ================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 sm:p-8 rounded-3xl shadow-md relative overflow-hidden">
-        {/* Glow accent */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-semibold mb-1">
-            <HeartPulse className="w-3.5 h-3.5 text-teal-400" />
-            <span>Health Triage Companion</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Good morning, {user?.name || "Aakash"}
-          </h1>
-          <p className="text-sm text-slate-300 max-w-xl">
-            How are you feeling today? Healix is ready to assist you in evaluating symptoms, identifying warning signs, and guiding care choices.
-          </p>
+    <div className="space-y-7 max-w-6xl mx-auto">
+      {/* Toast Notification */}
+      {updateSavedToast && (
+        <div className="fixed top-20 right-8 z-50 flex items-center gap-2 bg-emerald-800 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+          <span>Health data updated successfully</span>
         </div>
+      )}
 
-        <div className="relative z-10 flex flex-wrap items-center gap-3">
-          <Link to="/symptom-checker">
-            <Button
-              variant="teal"
-              size="lg"
-              icon={Stethoscope}
-              className="shadow-lg shadow-teal-900/40"
-            >
-              Start Symptom Check
-            </Button>
-          </Link>
-          <Link to="/assistant">
-            <Button
-              variant="secondary"
-              size="lg"
-              icon={BotMessageSquare}
-              className="bg-slate-800 text-white hover:bg-slate-700 border border-slate-700"
-            >
-              Ask Assistant
-            </Button>
-          </Link>
-        </div>
+      {/* Greeting Header */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+          Good morning, {user?.name || "Krrish"}
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          Here's a quick look at your health today.
+        </p>
       </div>
 
-      {/* ================= QUICK METRICS ROW (All Cards Fully Interactive) ================= */}
+      {/* 4 Metric Cards in a Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Assessments -> Clicks to /history */}
-        <HealthMetricCard
-          title="Total Assessments"
-          value={assessments.length}
-          subtitle="Documented evaluations"
-          icon={Activity}
-          badgeText="View all in history"
-          to="/history"
-        />
-
-        {/* Card 2: Last Check-in -> Clicks to view latest assessment summary report */}
-        <HealthMetricCard
-          title="Last Check-in"
-          value={
-            latestAssessment?.date
-              ? latestAssessment.date.includes(",")
-                ? latestAssessment.date.split(",")[0]
-                : latestAssessment.date
-              : "Today"
-          }
-          subtitle={latestAssessment?.primarySymptom || "Headache & fatigue"}
-          icon={Calendar}
-          badgeText="Report generated"
-          to={latestAssessment ? `/assessment/${latestAssessment.id}` : "/symptom-checker"}
-        />
-
-        {/* Card 3: Triage Status -> Clicks to open Triage & Safety Protocol Modal */}
-        <HealthMetricCard
-          title="Triage Status"
-          value={
-            latestAssessment?.urgencyLevel === "emergency"
-              ? "Emergency"
-              : latestAssessment?.urgencyLevel === "urgent"
-              ? "Urgent"
-              : "Routine"
-          }
-          subtitle={latestAssessment?.urgencyTitle || "No emergency red flags"}
-          icon={ShieldCheck}
-          badgeText="Safety engine active"
-          onClick={() => setShowTriageModal(true)}
-        />
-
-        {/* Card 4: Clinical Citations -> Clicks to open Verified Medical Sources Modal */}
-        <HealthMetricCard
-          title="Clinical Citations"
-          value="12 Verified"
-          subtitle="Mayo, WHO & NHS linked"
-          icon={Sparkles}
-          badgeText="Grounding active"
-          onClick={() => setShowSourcesModal(true)}
-        />
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <div
+              key={metric.id}
+              className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all"
+            >
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className={`w-8 h-8 rounded-lg ${metric.iconBg} flex items-center justify-center shrink-0`}>
+                  <Icon className={`w-4 h-4 ${metric.iconColor}`} />
+                </div>
+                <span className="text-xs font-medium text-slate-600">{metric.title}</span>
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-slate-900 tracking-tight">{metric.value}</p>
+                <p className="text-[11px] text-slate-400">{metric.subtext}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* ================= MAIN DASHBOARD GRID ================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Recent Assessment & Activity Chart (8 cols) */}
-        <div className="lg:col-span-8 space-y-8">
-          {/* Card 1: Recent Assessment */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-                Recent Assessment
-              </h2>
-              <Link
-                to="/symptom-checker"
-                className="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1"
-              >
-                New check-in <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+      {/* Featured AI Health Assistant Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#eef7f2] via-[#e5f4ec] to-[#d8efe2] border border-[#cbe6d5] p-6 sm:p-7 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs">
+        <div className="space-y-3 z-10 text-left w-full sm:w-auto">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-800 text-white flex items-center justify-center shadow-xs">
+              <Bot className="w-4 h-4" />
             </div>
+            <h2 className="text-lg font-bold text-emerald-950 tracking-tight">
+              AI Health Assistant
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-emerald-900/80 max-w-md leading-relaxed">
+            Ask questions, get personalized advice, and more.
+          </p>
+          <div className="pt-1">
+            <Link to="/assistant">
+              <button className="px-5 py-2.5 bg-[#065f46] hover:bg-[#064e3b] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer">
+                Chat Now
+              </button>
+            </Link>
+          </div>
+        </div>
 
-            {latestAssessment ? (
-              <AssessmentCard assessment={latestAssessment} />
-            ) : (
-              <div className="p-8 text-center bg-white rounded-2xl border border-slate-200">
-                <p className="text-sm text-slate-500">No assessments logged yet.</p>
-                <div className="mt-3">
-                  <Link to="/symptom-checker">
-                    <Button variant="teal" size="sm">
-                      Start your first check
-                    </Button>
-                  </Link>
+        {/* AI Robot with Botanical illustration on right */}
+        <div className="relative z-10 shrink-0 select-none">
+          <AiBotIllustration className="w-36 sm:w-48 h-28 sm:h-32" />
+        </div>
+      </div>
+
+      {/* Quick Actions Section */}
+      <div className="space-y-3.5">
+        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+          Quick Actions
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {quickActions.map((action, idx) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={idx}
+                onClick={action.onClick}
+                className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200/80 hover:border-emerald-600/50 hover:shadow-xs transition-all text-left cursor-pointer group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-800 group-hover:text-white transition-colors">
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-800 group-hover:text-emerald-900 transition-colors">
+                    {action.label}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Quick Action Modal: Update Health Data */}
+      {showUpdateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center">
+                  <Activity className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Update Health Data</h4>
+                  <p className="text-[11px] text-slate-500">Record your latest health vitals</p>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Card 2: Health Activity Chart */}
-          <Card padding="default">
-            <CardHeader
-              title="Health Activity & Symptom Trajectory"
-              subtitle="Weekly check-ins, fatigue reports, and discomfort index over the past 8 weeks"
-              action={
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
-                  Past 8 Weeks
-                </span>
-              }
-            />
-            <HealthActivityChart />
-            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
-              <p>Visualizing self-reported trends over time to assist clinical discussions.</p>
-              <span className="text-teal-700 font-medium">Updated Oct 2, 2026</span>
-            </div>
-          </Card>
-
-          {/* Card 3: Previous Assessments list */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-                Previous Assessments
-              </h2>
-              <Link
-                to="/history"
-                className="text-xs font-semibold text-teal-700 hover:text-teal-800 flex items-center gap-1"
+              <button
+                onClick={() => setShowUpdateModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
               >
-                View all history <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="space-y-3">
-              {previousAssessments.map((asm) => (
-                <AssessmentCard key={asm.id} assessment={asm} compact />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Health Insights & Safety Reminder (4 cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Card 4: Health Insights */}
-          <HealthInsightsCard />
-
-          {/* Quick AI Assistant Card */}
-          <Card padding="default" className="border-teal-100 bg-teal-50/40">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-xl bg-teal-600 text-white">
-                <BotMessageSquare className="w-5 h-5" />
+            <form onSubmit={handleSaveMetrics} className="space-y-3.5 mt-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Heart Rate (bpm)
+                </label>
+                <input
+                  type="number"
+                  value={metricUpdates.heartRate}
+                  onChange={(e) => setMetricUpdates({ ...metricUpdates, heartRate: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none"
+                />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Ask Healix Assistant
-                </h3>
-                <p className="text-[11px] text-slate-500">24/7 Clinical Q&A</p>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  SpO2 Oxygen (%)
+                </label>
+                <input
+                  type="number"
+                  value={metricUpdates.spo2}
+                  onChange={(e) => setMetricUpdates({ ...metricUpdates, spo2: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none"
+                />
               </div>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed mb-4">
-              Have questions about hydration, tension triggers, or what symptoms to track before a doctor's visit?
-            </p>
-            <Link to="/assistant">
-              <Button variant="outline" size="sm" className="w-full bg-white text-teal-800 border-teal-200">
-                Start Health Conversation
-              </Button>
-            </Link>
-          </Card>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Daily Steps
+                </label>
+                <input
+                  type="text"
+                  value={metricUpdates.steps}
+                  onChange={(e) => setMetricUpdates({ ...metricUpdates, steps: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  value={metricUpdates.weight}
+                  onChange={(e) => setMetricUpdates({ ...metricUpdates, weight: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none"
+                />
+              </div>
 
-          {/* Clinical Safety Card */}
-          <Card padding="default" className="border-slate-200 bg-slate-50/80">
-            <div className="flex items-center gap-2 mb-2">
-              <ShieldCheck className="w-4 h-4 text-teal-600" />
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Patient Safety Reassurance
-              </h4>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Healix does not diagnose diseases. In case of severe chest pain, sudden numbness, or shortness of breath, please call <strong>911 / 112</strong> immediately.
-            </p>
-          </Card>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowUpdateModal(false)}
+                  className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-medium bg-[#065f46] hover:bg-[#064e3b] text-white rounded-xl shadow-xs"
+                >
+                  Save Metrics
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-
-      {/* ================= INTERACTIVE MODALS FOR QUICK METRICS ================= */}
-      {/* 1. Triage Status & Protocol Modal */}
-      <TriageStatusModal
-        isOpen={showTriageModal}
-        onClose={() => setShowTriageModal(false)}
-        latestAssessment={latestAssessment}
-      />
-
-      {/* 2. Clinical Citations & Knowledge Bases Modal */}
-      <ClinicalSourcesModal
-        isOpen={showSourcesModal}
-        onClose={() => setShowSourcesModal(false)}
-      />
+      )}
     </div>
   );
 }

@@ -1,62 +1,46 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Stethoscope,
-  History,
-  BotMessageSquare,
-  FileText,
-  Settings,
-  LogOut,
-  ShieldCheck,
-  Activity,
+  Home,
+  ClipboardList,
+  MessageSquare,
+  FileBarChart2,
   HeartPulse,
+  Settings,
+  ChevronRight,
+  Stethoscope,
 } from "lucide-react";
 import { authService } from "../../services/authService";
+import { HealixLogo } from "./HealixLogo";
 
 export function Sidebar({ className = "" }) {
   const navigate = useNavigate();
-  const user = authService.getCurrentUser();
-
-  const handleLogout = () => {
-    authService.logout();
-    navigate("/login");
-  };
+  const user = authService.getCurrentUser() || {};
 
   const navItems = [
-    { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-    { label: "Symptom Checker", to: "/symptom-checker", icon: Stethoscope, badge: "AI" },
-    { label: "Health History", to: "/history", icon: History },
-    { label: "AI Assistant", to: "/assistant", icon: BotMessageSquare },
-    { label: "Reports", to: "/reports", icon: FileText },
+    { label: "Overview", to: "/dashboard", icon: Home },
+    { label: "Symptom Checker", to: "/symptom-checker", icon: Stethoscope },
+    { label: "Health Assessment", to: "/assessment", icon: ClipboardList },
+    { label: "AI Assistant", to: "/assistant", icon: MessageSquare },
+    { label: "Reports", to: "/reports", icon: FileBarChart2 },
+    { label: "Care Plan", to: "/care-plan", icon: HeartPulse },
     { label: "Settings", to: "/settings", icon: Settings },
   ];
 
   return (
     <aside
-      className={`w-64 bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 select-none border-r border-slate-800 ${className}`}
+      className={`w-64 bg-white text-slate-700 flex flex-col justify-between shrink-0 select-none border-r border-slate-200/80 shadow-[1px_0_4px_rgba(0,0,0,0.02)] ${className}`}
     >
       {/* Brand Header */}
       <div>
-        <div className="p-6 pb-5 flex items-center justify-between border-b border-slate-800/80">
-          <NavLink to="/dashboard" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-md shadow-teal-500/20 group-hover:bg-teal-500 transition-colors">
-              <HeartPulse className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="font-bold text-lg text-white tracking-tight flex items-center gap-1.5">
-                Healix
-                <span className="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded bg-teal-950 text-teal-400 border border-teal-800">
-                  AI Triage
-                </span>
-              </span>
-              <p className="text-[11px] text-slate-400 -mt-0.5">Clinical Intelligence</p>
-            </div>
+        <div className="p-6 pb-6 flex items-center justify-between">
+          <NavLink to="/dashboard" className="flex items-center gap-2 group">
+            <HealixLogo size={32} textClassName="text-xl font-bold text-emerald-950 tracking-tight" />
           </NavLink>
         </div>
 
         {/* Navigation Links */}
-        <nav className="p-4 space-y-1.5 mt-2">
+        <nav className="px-3.5 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -64,21 +48,18 @@ export function Sidebar({ className = "" }) {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-teal-600 text-white font-semibold shadow-sm shadow-teal-600/30"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800/70"
+                      ? "bg-emerald-50 text-emerald-800 font-semibold"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   }`
                 }
               >
-                <div className="flex items-center gap-3">
-                  <Icon className="w-5 h-5 shrink-0" />
-                  <span>{item.label}</span>
-                </div>
-                {item.badge && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300">
-                    {item.badge}
-                  </span>
+                {({ isActive }) => (
+                  <>
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-emerald-700" : "text-slate-500"}`} />
+                    <span>{item.label}</span>
+                  </>
                 )}
               </NavLink>
             );
@@ -86,40 +67,24 @@ export function Sidebar({ className = "" }) {
         </nav>
       </div>
 
-      {/* Safety Notice & User Profile */}
-      <div className="p-4 border-t border-slate-800/80 space-y-4">
-        {/* Safety Disclaimer Widget */}
-        <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-800 text-[11px] text-slate-400 leading-relaxed flex items-start gap-2.5">
-          <ShieldCheck className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-          <span>
-            <strong className="text-slate-200">Not a doctor:</strong> Healix offers triage information, not clinical diagnosis.
-          </span>
-        </div>
-
-        {/* User Card */}
-        <div className="flex items-center justify-between pt-2">
-          <div
-            onClick={() => navigate("/settings")}
-            className="flex items-center gap-3 min-w-0 cursor-pointer group"
-          >
-            <div className="w-9 h-9 rounded-xl bg-teal-700 text-white font-bold flex items-center justify-center shrink-0 border border-teal-500/30 group-hover:ring-2 group-hover:ring-teal-400 transition-all">
-              {user.name ? user.name[0].toUpperCase() : "A"}
+      {/* User Profile Pill at Bottom */}
+      <div className="p-4 border-t border-slate-100">
+        <div
+          onClick={() => navigate("/settings")}
+          className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-emerald-800 text-white font-semibold text-xs flex items-center justify-center shrink-0 shadow-xs">
+              {user.avatarInitials || (user.fullName ? user.fullName.split(" ").map(n => n[0]).join("") : "??")}
             </div>
-            <div className="truncate">
-              <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">
-                {user.fullName || user.name || "Aakash"}
+            <div className="truncate text-left">
+              <p className="text-sm font-medium text-slate-900 truncate">
+                {user.fullName || user.name || "Krish Alagh"}
               </p>
-              <p className="text-xs text-slate-400 truncate">{user.email || "aakash@example.com"}</p>
+              <p className="text-[11px] text-slate-400 truncate">View Profile</p>
             </div>
           </div>
-
-          <button
-            onClick={handleLogout}
-            title="Log out"
-            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors shrink-0" />
         </div>
       </div>
     </aside>

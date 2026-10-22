@@ -8,6 +8,9 @@ class FollowUpQuestionItem(BaseModel):
     question: str
     type: str
     order_index: int = 0
+    reasoning: Optional[str] = None
+    evidence_code: Optional[str] = None
+    options: Optional[List[str]] = None
 
     model_config = ConfigDict(from_attributes=True)
 

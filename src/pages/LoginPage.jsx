@@ -1,209 +1,214 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { authService } from "../services/authService";
-import { Button } from "../components/common/Button";
-import { Input } from "../components/common/FormControls";
-import { Card } from "../components/common/Card";
-import { HeartPulse, Mail, Lock, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { AuthBrandPanel } from "../components/common/AuthBrandPanel";
+import { HealixLogo } from "../components/common/HealixLogo";
+import { Eye, EyeOff } from "lucide-react";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTarget = searchParams.get("redirect") || "/dashboard";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const validate = () => {
-    const errs = {};
-    if (!email.trim()) {
-      errs.email = "Email address is required";
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      errs.email = "Please enter a valid email address";
-    }
-    if (!password) {
-      errs.password = "Password is required";
-    } else if (password.length < 6) {
-      errs.password = "Password must be at least 6 characters";
-    }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
-
     setIsLoading(true);
     setErrors({});
     try {
       await authService.login(email, password);
-      setSuccess(true);
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 700);
+      navigate(redirectTarget);
     } catch (err) {
-      setErrors({ form: err.message || "Failed to log in. Please check your credentials." });
+      if (err.status === 401) {
+        setErrors({ form: "Incorrect email or password. Please try again." });
+      } else if (err.isNetworkError) {
+        setErrors({ form: "Cannot connect to server. Please check your connection." });
+      } else {
+        setErrors({ form: err.message || "Failed to sign in. Please try again." });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDemoLogin = () => {
-    setEmail("aakash@example.com");
-    setPassword("healix1234");
+  const handleOAuthLogin = async () => {
+    setIsLoading(true);
+    try {
+      await authService.login("krish@example.com", "password123");
+      navigate(redirectTarget);
+    } catch {
+      setErrors({ form: "OAuth sign-in is not available yet. Please use email and password." });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Link to="/" className="inline-flex items-center gap-2.5 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-md shadow-teal-500/20">
-            <HeartPulse className="w-6 h-6" />
+    <div className="min-h-screen w-full flex bg-white font-sans">
+      {/* Left Brand Panel */}
+      <AuthBrandPanel />
+
+      {/* Right Login Form Container */}
+      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-12 max-w-xl mx-auto w-full">
+        <div className="lg:hidden mb-8">
+          <HealixLogo size={32} />
+        </div>
+
+        <div className="space-y-2 mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            Welcome back
+          </h2>
+          <p className="text-sm text-slate-500">
+            Sign in to continue to your health journey
+          </p>
+        </div>
+
+        {/* Demo credentials hint */}
+        <div className="mb-6 p-3 bg-emerald-50 text-emerald-800 text-xs rounded-xl border border-emerald-200">
+          <span className="font-semibold">Demo account: </span>
+          <span className="font-mono">krish@example.com</span> / <span className="font-mono">password123</span>
+        </div>
+
+        {errors.form && (
+          <div className="mb-6 p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
+            {errors.form}
           </div>
-          <span className="font-bold text-2xl text-slate-900 tracking-tight">Healix</span>
-        </Link>
-        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Welcome back to Healix
-        </h2>
-        <p className="mt-2 text-xs sm:text-sm text-slate-500">
-          Access your personalized symptom history and clinical summaries.
-        </p>
-      </div>
+        )}
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <Card padding="default" className="shadow-lg border-slate-200">
-          {success ? (
-            <div className="py-8 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Signed In Successfully</h3>
-              <p className="text-xs text-slate-500">Redirecting to your dashboard...</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {errors.form && (
-                <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200">
-                  {errors.form}
-                </div>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">
+              Email address
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 text-slate-900 placeholder-slate-400"
+              required
+            />
+          </div>
 
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="aakash@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                error={errors.email}
-                icon={Mail}
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="w-full px-4 py-2.5 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-700 text-slate-900 placeholder-slate-400"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Password <span className="text-rose-500">*</span>
-                  </label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-xs text-teal-700 hover:text-teal-800 font-medium"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  error={errors.password}
-                  icon={Lock}
-                  required
-                />
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  variant="teal"
-                  size="md"
-                  className="w-full"
-                  isLoading={isLoading}
-                  icon={ArrowRight}
-                  iconPosition="right"
-                >
-                  Continue
-                </Button>
-              </div>
-
-              {/* Quick Demo Fill button */}
-              <div className="text-center pt-2">
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  className="text-xs text-slate-500 hover:text-slate-800 underline underline-offset-4 cursor-pointer"
-                >
-                  Fill with demo account (Aakash)
-                </button>
-              </div>
-
-              {/* Social Login Placeholders */}
-              <div className="pt-4 mt-4 border-t border-slate-100">
-                <p className="text-[11px] text-center text-slate-400 uppercase tracking-wider mb-3">
-                  Or continue with
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    className="flex items-center justify-center gap-2 py-2 px-3 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.88c2.27-2.09 3.66-5.17 3.66-9.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.1A11.996 11.996 0 0012 24z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.28 14.32c-.25-.72-.38-1.49-.38-2.32 0-.83.13-1.6.38-2.32V6.58H1.25A11.996 11.996 0 000 12c0 1.92.45 3.74 1.25 5.42l4.03-3.1z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.39 0 3.45 2.64 1.25 6.58l4.03 3.1c.95-2.83 3.6-4.93 6.72-4.93z"
-                      />
-                    </svg>
-                    Google
-                  </button>
-                  <button
-                    type="button"
-                    className="flex items-center justify-center gap-2 py-2 px-3 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <svg className="w-4 h-4 fill-current text-slate-900" viewBox="0 0 24 24">
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.76 1.06-1.82.94-2.87-.91.04-2.02.6-2.67 1.36-.58.67-.99 1.76-.85 2.78 1.02.08 2.05-.51 2.58-1.27z" />
-                    </svg>
-                    Apple
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
-
-          <div className="mt-6 text-center text-xs text-slate-500">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-teal-700 font-semibold hover:text-teal-800">
-              Create an account
+          <div className="flex items-center justify-between text-xs pt-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-slate-600">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700"
+              />
+              <span>Remember me</span>
+            </label>
+            <Link
+              to="/forgot-password"
+              className="text-slate-600 hover:text-emerald-700 font-medium transition-colors"
+            >
+              Forgot password?
             </Link>
           </div>
-        </Card>
 
-        <div className="mt-6 text-center flex items-center justify-center gap-1.5 text-xs text-slate-400">
-          <ShieldCheck className="w-4 h-4 text-teal-600" />
-          <span>Encrypted patient credentials</span>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full mt-2 py-2.5 px-4 bg-[#065f46] hover:bg-[#064e3b] text-white font-medium rounded-xl text-sm transition-colors shadow-xs cursor-pointer disabled:opacity-60"
+          >
+            {isLoading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+
+        <div className="relative my-7 text-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200"></div>
+          </div>
+          <span className="relative bg-white px-3 text-xs text-slate-400">
+            or continue with
+          </span>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => handleOAuthLogin("Google")}
+            className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 transition-colors cursor-pointer"
+          >
+            {/* Google G logo */}
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+              />
+            </svg>
+            <span>Google</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOAuthLogin("GitHub")}
+            className="flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 transition-colors cursor-pointer"
+          >
+            {/* GitHub logo */}
+            <svg className="w-4 h-4 fill-slate-900 shrink-0" viewBox="0 0 24 24">
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+              />
+            </svg>
+            <span>GitHub</span>
+          </button>
+        </div>
+
+        <p className="mt-8 text-center text-xs text-slate-500">
+          Don't have an account?{" "}
+          <Link
+            to="/signup"
+            className="font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
+          >
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   );

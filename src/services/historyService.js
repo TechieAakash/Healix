@@ -1,36 +1,40 @@
 import { assessmentService } from "./assessmentService";
-import { apiRequest } from "./apiClient";
 
 export const historyService = {
   async getHistory() {
-    const res = await apiRequest("/history");
-    if (res && Array.isArray(res)) return res;
-    return assessmentService.getAllAssessments();
+    return await assessmentService.getAllAssessments();
   },
 
   async filterHistory({ filter = "all", searchQuery = "" }) {
     const list = await this.getHistory();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
     return list.filter((item) => {
-      // Filter by urgency or status
-      if (filter === "urgent" && item.urgencyLevel !== "urgent") return false;
-      if (filter === "routine" && item.urgencyLevel !== "routine") return false;
-      if (filter === "completed" && item.status !== "Completed") return false;
+      // Filter by urgency or timeframe
+      if (filter === "recent") {
+        const itemDate = new Date(item.date || item.createdAt);
+        if (!isNaN(itemDate.getTime()) && itemDate < sevenDaysAgo) {
+          return false;
+        }
+      } else if (filter === "urgent") {
+        const level = (item.urgencyLevel || "").toLowerCase();
+        if (level !== "urgent" && level !== "emergency") return false;
+      } else if (filter === "routine") {
+        const level = (item.urgencyLevel || "").toLowerCase();
+        if (level !== "routine" && level !== "self-care" && level !== "low") return false;
+      } else if (filter === "completed") {
+        if (item.status !== "Completed" && item.status !== "COMPLETED") return false;
+      }
 
       // Filter by search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const text = `${item.primarySymptom} ${item.symptoms.join(" ")} ${item.urgencyTitle}`.toLowerCase();
+        const symptomStr = Array.isArray(item.symptoms) ? item.symptoms.join(" ") : "";
+        const text = `${item.primarySymptom || ""} ${symptomStr} ${item.urgencyTitle || ""}`.toLowerCase();
         if (!text.includes(q)) return false;
       }
 
       return true;
     });
-  },
-
-  async deleteRecord(id) {
-    const list = assessmentService.getAllAssessments();
-    const updated = list.filter((item) => item.id !== id);
-    localStorage.setItem("healix_assessments", JSON.stringify(updated));
-    return updated;
   },
 };

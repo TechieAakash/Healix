@@ -1,5 +1,5 @@
 import React from "react";
-import { Bot, User, ShieldCheck, ExternalLink } from "lucide-react";
+import { Bot, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function ChatMessage({ message }) {
@@ -16,7 +16,7 @@ export function ChatMessage({ message }) {
     >
       {/* Assistant Avatar */}
       {isAssistant && (
-        <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs border border-teal-500/20">
+        <div className="w-8 h-8 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-xs border border-teal-500/20">
           <Bot className="w-4 h-4" />
         </div>
       )}
@@ -36,8 +36,8 @@ export function ChatMessage({ message }) {
 
         {/* Clinical source citations if present */}
         {isAssistant && message.sources && message.sources.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-            <ShieldCheck className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+          <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+            <ShieldCheck className="w-3.5 h-3.5 text-teal-700 shrink-0" />
             <span className="font-semibold text-slate-500">Sources:</span>
             {message.sources.map((src, i) => (
               <span
@@ -52,7 +52,7 @@ export function ChatMessage({ message }) {
 
         <div
           className={`text-[10px] mt-2 flex items-center justify-end ${
-            isAssistant ? "text-slate-400" : "text-slate-400"
+            isAssistant ? "text-slate-500" : "text-slate-500"
           }`}
         >
           <span>{message.timestamp}</span>

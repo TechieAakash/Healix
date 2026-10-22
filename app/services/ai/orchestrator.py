@@ -7,6 +7,7 @@ Grounding Check -> Safety Validation -> Response Building -> Observability Track
 
 import json
 import logging
+import re
 import time
 from typing import List, Dict, Any, Optional
 
@@ -41,6 +42,7 @@ from app.services.ai.prompts.chat import (
 )
 from app.services.triage_service import TriageService
 from app.services.ai_service import AIService
+from app.utils.validators import AIResponseValidator
 
 logger = logging.getLogger("healix.ai.orchestrator")
 
@@ -240,7 +242,7 @@ class AIOrchestrator(AIService):
             "possible_explanations": [e.model_dump() for e in analysis_obj.possible_explanations],
             "general_guidance": analysis_obj.general_guidance,
             "warning_signs": analysis_obj.warning_signs,
-            "sources": citations if citations else self._default_authoritative_sources(),
+            "sources": citations,
             "disclaimer": STANDARD_MEDICAL_DISCLAIMER,
         }
 
@@ -248,6 +250,7 @@ class AIOrchestrator(AIService):
         validated_result = ClinicalSafetyValidator.validate_and_sanitize_response(
             raw_result, deterministic_urgency=deterministic_urgency
         )
+        validated_result = AIResponseValidator.sanitize_and_validate(validated_result)
 
         # 8. Observability & Audit Trail Recording
         latency = (time.perf_counter() - start_time) * 1000
@@ -286,8 +289,17 @@ class AIOrchestrator(AIService):
             for m in recent_history
         ])
 
-        # RAG retrieval for specific question
-        retrieved_chunks = await self.retriever.retrieve_context(clean_user_msg, top_k=2)
+        # Resolve short follow-up questions against the recent user context so
+        # "what about that?" retrieves the topic already under discussion.
+        retrieval_query = clean_user_msg
+        if re.search(r"\b(it|that|those|they|there|what about|and then)\b", clean_user_msg.lower()):
+            prior_user_text = " ".join(
+                m.get("content", "") for m in recent_history[:-1]
+                if m.get("role", "").lower() == "user"
+            )
+            if prior_user_text:
+                retrieval_query = f"{prior_user_text} {clean_user_msg}"
+        retrieved_chunks = await self.retriever.retrieve_context(retrieval_query, top_k=4)
         rag_context_block = self.retriever.build_rag_context_block(retrieved_chunks)
 
         # Assessment context snapshot
@@ -346,20 +358,13 @@ class AIOrchestrator(AIService):
         """Emergency safe response prioritizing life-safety over LLM speculation."""
         return {
             "summary": (
-                "CRITICAL MEDICAL ALERT: Reported symptoms triggered high-priority emergency safety rules. "
+                "Urgent safety guidance: reported symptoms matched an emergency warning rule. "
                 + triage_result.get("message", "Immediate emergency evaluation is strongly advised.")
             ),
             "urgency_level": UrgencyLevel.EMERGENCY.value,
-            "possible_explanations": [
-                {
-                    "title": "Acute Medical Emergency Evaluation Required",
-                    "description": "Symptoms reported require immediate in-person diagnostic evaluation (such as ECG, imaging, or laboratory tests) to rule out life-threatening acute cardiovascular, respiratory, or neurological conditions.",
-                    "match_level": "Immediate Clinical Concern",
-                    "supporting_information": ["Triggered deterministic emergency safety indicators"],
-                }
-            ],
+            "possible_explanations": [],
             "general_guidance": [
-                "Call 911 or local emergency services immediately.",
+                "Contact your local emergency services or go to the nearest emergency department now.",
                 "Do not drive yourself to the emergency department if experiencing chest pain, severe shortness of breath, or weakness.",
                 "Notify someone nearby about your symptoms.",
             ],
@@ -369,20 +374,7 @@ class AIOrchestrator(AIService):
                 "Sudden weakness, facial drooping, or slurred speech",
                 "Thunderclap explosive headache",
             ],
-            "sources": [
-                {
-                    "title": "Adult Emergency Symptoms and Immediate Actions",
-                    "organization": "Centers for Disease Control and Prevention (CDC)",
-                    "url": "https://www.cdc.gov/heart-disease/signs-symptoms/index.html",
-                    "relevance": 1.0,
-                },
-                {
-                    "title": "WHO Emergency Clinical Guidelines",
-                    "organization": "World Health Organization (WHO)",
-                    "url": "https://www.who.int",
-                    "relevance": 1.0,
-                },
-            ],
+            "sources": [],
             "disclaimer": STANDARD_MEDICAL_DISCLAIMER,
         }
 
@@ -395,14 +387,7 @@ class AIOrchestrator(AIService):
             symptoms=names,
             duration=["recent"],
             severity=["moderate"],
-            possible_explanations=[
-                PossibleExplanationItem(
-                    title="Physiological Functional Discomfort",
-                    description="Symptoms may be consistent with transient functional or viral etiologies. Clinical in-person evaluation is recommended if discomfort persists.",
-                    supporting_information=["Baseline clinical evaluation rules"],
-                    match_level="Possible Consideration",
-                )
-            ],
+            possible_explanations=[],
             follow_up_questions=["Has your symptom pattern changed over the past 24 hours?"],
             warning_signs=[
                 "Sudden severe pain",

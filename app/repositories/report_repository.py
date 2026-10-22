@@ -46,6 +46,11 @@ class ReportRepository:
         self.db.refresh(report)
         return report
 
+    def update(self, report: Report) -> Report:
+        self.db.commit()
+        self.db.refresh(report)
+        return report
+
     def delete(self, report: Report) -> None:
         self.db.delete(report)
         self.db.commit()

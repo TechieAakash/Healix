@@ -1,4 +1,4 @@
-# Healix — Production-Grade Backend Engine
+# Healix — Offline Health Information Platform
 ### AI-Powered Healthcare Symptom Analysis & Triage Assistant
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -7,7 +7,7 @@
 [![Alembic](https://img.shields.io/badge/Alembic-1.14+-4B5563)](https://alembic.sqlalchemy.org)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
-[![Tests](https://img.shields.io/badge/Pytest-24%20Passed%20(100%25)-brightgreen?logo=pytest&logoColor=white)](https://docs.pytest.org)
+[![Tests](https://img.shields.io/badge/Pytest-88%20Passed-brightgreen?logo=pytest&logoColor=white)](https://docs.pytest.org)
 
 > **CRITICAL MEDICAL DISCLAIMER**: Healix is **NOT** a diagnostic system. It does not replace professional clinical judgment, diagnosis, or treatment. The backend strictly enforces non-diagnostic health-information terminology (*"possible explanation"*, *"potential warning sign"*, *"health information"*, *"consider seeking medical attention"*) and never states or implies medical certainty.
 
@@ -23,25 +23,32 @@
 7. [Authentication & Authorization Flow](#-authentication--authorization-flow)
 8. [Deterministic Safety-First Triage Engine](#-deterministic-safety-first-triage-engine)
 9. [Assessment State Machine Workflow](#-assessment-state-machine-workflow)
-10. [AI Abstraction & Future AI/RAG/ML Integration](#-ai-abstraction--future-airagml-integration)
-11. [Data Privacy, Security & Rate Limiting](#-data-privacy-security--rate-limiting)
-12. [Getting Started (Local Development)](#-getting-started-local-development)
-13. [Database Migrations (Alembic)](#-database-migrations-alembic)
-14. [Docker & Containerization](#-docker--containerization)
-15. [Automated Testing Suite (Pytest)](#-automated-testing-suite-pytest)
-16. [Limitations & Ethical AI Boundaries](#-limitations--ethical-ai-boundaries)
+10. [AI Techniques Used](#ai-techniques-used)
+11. [Offline AI and Response Framing](#-offline-ai-and-response-framing)
+12. [Data Privacy, Security & Rate Limiting](#-data-privacy-security--rate-limiting)
+13. [Getting Started (Local Development)](#-getting-started-local-development)
+14. [Database Migrations (Alembic)](#-database-migrations-alembic)
+15. [Docker & Containerization](#-docker--containerization)
+16. [Automated Testing Suite (Pytest)](#-automated-testing-suite-pytest)
+17. [Limitations & Ethical AI Boundaries](#-limitations--ethical-ai-boundaries)
 
 ---
 
 ## 💡 Project Overview
 
-**Healix** is a high-reliability healthcare symptom analysis and triage backend designed with a **clean, modular 3-tier architecture (Route → Service → Repository)**. 
+**Healix** is an offline symptom-intake and safety-guidance application with a React/Vite frontend and a FastAPI backend, using a **Route → Service → Repository** structure. It does not diagnose or prescribe.
 
-The primary architectural goal of this phase is to establish a rock-solid, production-grade foundation with:
-- **Zero hard-coupling to AI vendors**: AI responses are abstracted through a clean `AIService` contract with an initial `MockAIService`.
-- **Deterministic Red-Flag Safety Engine**: A rule-based triage system that evaluates life-threatening cardiopulmonary and neurological red flags **prior to and independently from** any AI analysis.
+The application includes:
+- **Local-first Python assessment logic**: Safety rules, evidence mapping, question selection, and optional synthetic-data pattern ranking run locally.
+- **Deterministic Red-Flag Safety Engine**: Rule-based triage controls urgency independently from any model or response framing.
 - **Strict Anti-IDOR & Privacy Controls**: Every resource access verifies user ownership; endpoints support one-click complete user data anonymization/deletion.
 - **Production-Grade Resilience**: Structured sanitizing middleware (no credentials or medical data logged), sliding-window rate limiting, centralized RFC-7807-style error formatting, and automated Alembic schema versioning.
+
+## AI techniques used
+
+The live assessment uses Python production rules and an explicit symptom ontology for safety triage, then selects supported follow-up questions with greedy information gain or bounded best-first search. A calibrated Naive Bayes model may show clearly labeled matches to synthetic DDXPlus cases; it abstains when the evidence or calibration is insufficient and never changes urgency. Local response generation is used for generic framing and grounded health information. A compact ID3 tree is an offline comparison baseline, not a live decision-maker.
+
+The techniques, course outcomes, tests, and measured outputs are mapped in [docs/SYLLABUS_ALIGNMENT.md](docs/SYLLABUS_ALIGNMENT.md). Reproducible synthetic-data evaluation and its limitations are in [docs/ai_evaluation.md](docs/ai_evaluation.md). Synthetic-data scores are not clinical accuracy.
 
 ---
 
@@ -555,50 +562,25 @@ Assessments transition through an explicit state machine:
 
 ---
 
-## 🤖 Real AI Layer Architecture & Integration
+## 🤖 Offline AI and Response Framing
 
-Healix integrates a production-grade, modular, safety-first AI layer designed specifically for healthcare information delivery, structured symptom triage, and source-grounded educational synthesis.
+Healix's main assessment decisions run through local Python components: a production-rule safety engine, evidence mapper, calibrated Naive Bayes pattern ranker, and evidence-question search. The default response provider is a deterministic Python implementation. The optional external provider is not needed for core assessment behavior.
 
-> **PRIMARY SAFETY DIRECTIVE**: Healix is **NOT** a medical diagnostic system. Professional medical care remains the sole authority for clinical diagnosis and prescription. The architecture strictly enforces: **Deterministic Safety Rules > AI-Generated Interpretations**. The LLM is an assistant and can never override or downgrade an emergency determination.
+> **PRIMARY SAFETY DIRECTIVE**: Healix is not a medical diagnostic system. Dataset matches are synthetic patterns, and deterministic safety rules always control urgency.
 
 ```mermaid
 graph TD
-    User([Patient / User]) -->|HTTPS POST| API[FastAPI Assessment / Chat Route]
-    API --> Service[Assessment / Chat Service]
-    Service --> Sanitizer[Context & PII Sanitizer / Prompt Guard]
-    
-    subgraph AI Orchestration Pipeline
-        Sanitizer --> Extractor[Symptom Extractor & Normalizer]
-        Extractor --> PreTriage[Deterministic Red-Flag Safety Engine - Pass 1]
-        
-        PreTriage -->|EMERGENCY| EmergencyLock[Hard Safety Boundary: Emergency Guidance Lock]
-        PreTriage -->|Routine / Urgent| FollowUp[Adaptive Follow-Up Question Engine]
-        
-        FollowUp --> PostTriage[Deterministic Safety Engine - Pass 2 with Answers]
-        PostTriage -->|EMERGENCY| EmergencyLock
-        PostTriage -->|Proceed| RAG[RAG Retrieval Pipeline]
-        
-        subgraph RAG Subsystem
-            RAG --> Embeddings[Embedding Service: OpenAI / Lightweight Semantic]
-            Embeddings --> VDB[(JSON / In-Memory Vector Store)]
-            VDB --> HybridFilter[Semantic Search + Metadata Topic Filtering]
-            HybridFilter --> Reranker[Lexical-Semantic Reranker]
-            Reranker --> GroundedDocs[Authoritative Clinical Chunks + Citations]
-        end
-        
-        GroundedDocs --> ContextBuilder[Delimited Context Builder: Docs as DATA]
-        ContextBuilder --> LLMProvider[LLM Provider: OpenAI / Mock / HTTP]
-        
-        LLMProvider --> StructuredResp[Pydantic Structured Output Validation]
-        StructuredResp --> GroundingValidator[Grounding & Hallucination Check]
-        GroundingValidator --> SafetyValidator[Clinical Safety & Non-Diagnostic Validator]
-    end
-    
-    EmergencyLock --> FinalReport[Final Structured Health Report / Chat Message]
-    SafetyValidator --> FinalReport
-    FinalReport --> Observability[AI Observability & Audit Trail Tracker]
-    Observability --> DB[(MySQL 8.0 / SQLite)]
-    FinalReport --> API
+    User([User]) --> API[FastAPI route]
+    API --> Assessment[Python assessment service]
+    Assessment --> NLU[Symptom extraction and evidence mapping]
+    NLU --> Safety[Forward-chaining safety rules]
+    Safety -->|Emergency| Escalate[Emergency guidance]
+    Safety -->|No emergency rule| Search[Evidence-question search]
+    Search --> Rank[Calibrated synthetic-pattern ranker or abstain]
+    Rank --> Frame[Local Python report framing and grounded references]
+    Escalate --> Report[Non-diagnostic report]
+    Frame --> Report
+    Report --> DB[(SQLite or configured SQL database)]
 ```
 
 ---
@@ -641,12 +623,15 @@ app/services/ai/
 
 ---
 
-### 2. LLM Provider (`app/services/ai/llm/`)
-Configurable through environment variables (`AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, `AI_TEMPERATURE`, `AI_MAX_TOKENS`, `AI_BASE_URL`).
-- **`OpenAILLMProvider`**: Asynchronous HTTP client using `httpx.AsyncClient` supporting OpenAI, Azure OpenAI, Groq, DeepSeek, or local Ollama/vLLM endpoints.
-- **`MockLLMProvider`**: High-fidelity, deterministic healthcare mock provider for offline development, local CI/CD pipelines, and zero-token testing.
-- **Controlled Retries**: Automatic JSON and schema validation retries (bounded to `AI_MAX_RETRIES = 2`) with error feedback loops to prevent malformed outputs.
-- **Safe Fallback**: If an LLM call exhausts retries or errors, the system engages deterministic fallback analysis to ensure zero service disruption.
+### 2. Local Python Provider (`app/services/ai/llm/`)
+`AI_PROVIDER=local` is the default. `LocalLLMProvider` is a deterministic Python rules and templates implementation; it does not call a language model. The bundled knowledge index, report framing, and chat can run without an API key or network access. `AI_PROVIDER=mock` selects the test provider. `AI_PROVIDER=openai` is optional and requires `AI_API_KEY`.
+
+Assessment handling runs Python symptom extraction and deterministic red-flag triage, then retrieves educational passages and citations from the local knowledge base. The safety rules control urgency and cannot be downgraded by generated wording. If no grounded reference is found, Healix does not invent a source or condition explanation.
+
+Run locally with:
+```bash
+AI_PROVIDER=local uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
 
 ---
 
@@ -703,6 +688,9 @@ python -m app.ai.evaluate
 # Run complete pytest suite (including evaluation, security, safety, and RAG):
 pytest
 ```
+
+The project also includes a standard-library multinomial Naive Bayes benchmark trained on the English DDXPlus synthetic train split and scored against its independent test split. Results and limitations are in [`docs/ddxplus_evaluation.md`](docs/ddxplus_evaluation.md); the reproducible training script is [`scripts/train_ddxplus_nb.py`](scripts/train_ddxplus_nb.py). This dataset benchmark is for coursework evaluation and is not used to diagnose users or determine urgency.
+For a course-outcome walkthrough and clear boundaries on which syllabus topics are implemented, see [`docs/SYLLABUS_ALIGNMENT.md`](docs/SYLLABUS_ALIGNMENT.md). For measured synthetic-data results, see [`docs/ai_evaluation.md`](docs/ai_evaluation.md).
 
 ---
 

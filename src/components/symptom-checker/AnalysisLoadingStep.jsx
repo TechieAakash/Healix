@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Check, Loader2, ShieldCheck, Database, Cpu } from "lucide-react";
+import { Check, Loader2, ShieldCheck, Cpu } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function AnalysisLoadingStep({ onComplete }) {
@@ -39,7 +39,7 @@ export function AnalysisLoadingStep({ onComplete }) {
       {/* Subtle pulsing indicator */}
       <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
         <div className="absolute inset-0 rounded-full bg-teal-100/60 animate-ping" />
-        <div className="w-16 h-16 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-lg shadow-teal-600/30 relative z-10">
+        <div className="w-16 h-16 rounded-2xl bg-teal-700 text-white flex items-center justify-center shadow-lg shadow-teal-600/30 relative z-10">
           <Cpu className="w-8 h-8 animate-pulse" />
         </div>
       </div>
@@ -68,10 +68,10 @@ export function AnalysisLoadingStep({ onComplete }) {
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-xs transition-colors ${
                   isDone
-                    ? "bg-teal-600 text-white"
+                    ? "bg-teal-700 text-white"
                     : isCurrent
                     ? "bg-teal-100 text-teal-800 border border-teal-300"
-                    : "bg-slate-100 text-slate-400 border border-slate-200"
+                    : "bg-slate-100 text-slate-500 border border-slate-200"
                 }`}
               >
                 {isDone ? (
@@ -90,7 +90,7 @@ export function AnalysisLoadingStep({ onComplete }) {
                       ? "text-slate-900"
                       : isDone
                       ? "text-teal-900"
-                      : "text-slate-400"
+                      : "text-slate-500"
                   }`}
                 >
                   {stage.title}
@@ -102,8 +102,8 @@ export function AnalysisLoadingStep({ onComplete }) {
         })}
       </div>
 
-      <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400">
-        <ShieldCheck className="w-4 h-4 text-teal-600" />
+      <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-500">
+        <ShieldCheck className="w-4 h-4 text-teal-700" />
         <span>Evidence-grounded retrieval • No definitive disease diagnosis claimed</span>
       </div>
     </div>

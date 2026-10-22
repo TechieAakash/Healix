@@ -15,6 +15,20 @@ from app.services.ai.schemas import SourceCitation
 
 logger = logging.getLogger("healix.ai.retriever")
 
+_STOPWORDS = {"a", "an", "and", "are", "as", "at", "be", "been", "for", "from", "had", "has", "have", "i", "in", "is", "it", "me", "my", "of", "on", "or", "the", "this", "to", "was", "were", "with", "you", "your"}
+_CLINICAL_SYNONYMS = {
+    "tummy": "abdominal", "belly": "abdominal", "stomach": "abdominal",
+    "queasy": "nausea", "nauseous": "nausea", "throwing": "vomiting",
+    "puking": "vomiting", "winded": "breathing", "breathless": "breathing",
+    "lightheaded": "dizziness", "woozy": "dizziness", "temperature": "fever",
+    "pyrexia": "fever", "tired": "fatigue", "exhausted": "fatigue",
+    "rash": "skin", "itchy": "itching", "pee": "urination", "urinate": "urination",
+}
+
+
+def _clinical_tokens(text: str) -> set[str]:
+    return {_CLINICAL_SYNONYMS.get(token, token) for token in re.findall(r"\w+", text.lower()) if token not in _STOPWORDS}
+
 
 class LightweightLexicalSemanticReranker(BaseReranker):
     """
@@ -31,7 +45,7 @@ class LightweightLexicalSemanticReranker(BaseReranker):
         if not candidates:
             return []
 
-        query_tokens = set(re.findall(r"\w+", query.lower()))
+        query_tokens = _clinical_tokens(query)
         reranked = []
 
         for item in candidates:
@@ -43,8 +57,8 @@ class LightweightLexicalSemanticReranker(BaseReranker):
             base_score = float(item.get("similarity_score", 0.0))
 
             # Keyword overlap bonus
-            text_tokens = set(re.findall(r"\w+", text))
-            title_tokens = set(re.findall(r"\w+", title))
+            text_tokens = _clinical_tokens(text)
+            title_tokens = _clinical_tokens(title)
 
             overlap_count = len(query_tokens.intersection(text_tokens))
             title_overlap = len(query_tokens.intersection(title_tokens))
@@ -56,7 +70,7 @@ class LightweightLexicalSemanticReranker(BaseReranker):
             item_copy["reranked_score"] = combined_score
             reranked.append(item_copy)
 
-        reranked.sort(key=lambda x: x["reranked_score"], reverse=True)
+        reranked.sort(key=lambda x: (x["reranked_score"], x.get("similarity_score", 0)), reverse=True)
         return reranked[:top_k]
 
 
@@ -166,11 +180,16 @@ class RAGRetriever:
             meta = chk.get("metadata", {})
             org = meta.get("organization", "Medical Authority")
             title = meta.get("title", "Guideline")
+            topic = meta.get("topic", "")
+            url = meta.get("url", "")
             text = chk.get("text", "").strip()
 
             blocks.append(
                 f"[DOCUMENT {i}]\n"
-                f"Source: {org} - {title}\n"
+                f"Source: {org}\n"
+                f"Title: {title}\n"
+                f"Topic: {topic}\n"
+                f"URL: {url}\n"
                 f"Evidence Context: {text}\n"
                 f"[END DOCUMENT {i}]"
             )

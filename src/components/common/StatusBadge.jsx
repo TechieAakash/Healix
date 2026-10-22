@@ -1,6 +1,5 @@
 import React from "react";
 import { Badge } from "./Badge";
-import { CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 
 export function StatusBadge({ status = "Completed" }) {
   const normalized = status.toLowerCase();

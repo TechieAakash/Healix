@@ -1,5 +1,5 @@
 from typing import List, Union, Optional
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import AnyHttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import json
 
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
         return []
 
     # AI & Vector DB Integrations
-    AI_PROVIDER: str = "mock"
+    AI_PROVIDER: str = "local"
     AI_API_KEY: str = ""
     AI_MODEL: str = "gpt-4o-mini"
     AI_TEMPERATURE: float = 0.2
@@ -47,6 +47,20 @@ class Settings(BaseSettings):
     AI_BASE_URL: Optional[str] = None
     AI_REQUEST_TIMEOUT: float = 30.0
     AI_MAX_RETRIES: int = 2
+
+    @field_validator("AI_PROVIDER", mode="before")
+    @classmethod
+    def normalize_ai_provider(cls, value: str) -> str:
+        provider = str(value or "local").strip().lower()
+        if provider not in {"local", "openai", "mock"}:
+            raise ValueError("AI_PROVIDER must be one of: local, openai, mock")
+        return provider
+
+    @model_validator(mode="after")
+    def require_key_for_explicit_openai(self):
+        if self.AI_PROVIDER == "openai" and not self.AI_API_KEY.strip():
+            raise ValueError("AI_API_KEY is required when AI_PROVIDER=openai")
+        return self
 
     # Embeddings & RAG Vector DB
     EMBEDDING_MODEL: str = "text-embedding-3-small"

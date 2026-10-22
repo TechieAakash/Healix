@@ -24,7 +24,7 @@ export function ForgotPasswordPage() {
     try {
       await authService.resetPassword(email);
       setSubmitted(true);
-    } catch (err) {
+    } catch {
       setError("Could not process reset. Please try again.");
     } finally {
       setIsLoading(false);
@@ -35,7 +35,7 @@ export function ForgotPasswordPage() {
     <div className="min-h-[75vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link to="/" className="inline-flex items-center gap-2.5 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-md shadow-teal-500/20">
+          <div className="w-10 h-10 rounded-xl bg-teal-700 flex items-center justify-center text-white shadow-md shadow-teal-500/20">
             <HeartPulse className="w-6 h-6" />
           </div>
           <span className="font-bold text-2xl text-slate-900 tracking-tight">Healix</span>
@@ -72,7 +72,7 @@ export function ForgotPasswordPage() {
               <Input
                 label="Email Address"
                 type="email"
-                placeholder="aakash@example.com"
+                placeholder="krish@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 error={error}
@@ -83,7 +83,7 @@ export function ForgotPasswordPage() {
               <div className="pt-2">
                 <Button
                   type="submit"
-                  variant="teal"
+                  variant="primary"
                   size="md"
                   className="w-full"
                   isLoading={isLoading}

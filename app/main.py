@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.logging import RequestLoggingMiddleware
@@ -14,9 +15,21 @@ from app.core.database import Base, engine
 if settings.DATABASE_URL.startswith("sqlite"):
     Base.metadata.create_all(bind=engine)
 
+@asynccontextmanager
+async def lifespan(_app):
+    # Warm the configured provider and bundled local RAG index at startup so
+    # first requests do not trigger setup or depend on an ingest command.
+    from app.services.ai.llm.provider import get_llm_provider
+    from app.services.ai.rag.vector_store import get_vector_store
+    get_llm_provider()
+    get_vector_store()
+    yield
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
+    lifespan=lifespan,
     description="""
 # Healix Healthcare Symptom Analysis & Triage Assistant API
 
@@ -32,7 +45,7 @@ All outputs are educational information and urgency guidelines to assist users i
 * 🩺 **Symptom Tracker**: Structured severity (1-10) and duration recording.
 * 📋 **Triage Workflow**: State-machine driven assessments with follow-up questioning.
 * 🛡️ **Safety-First Engine**: Deterministic red-flag emergency screening rules.
-* 🤖 **AI Grounding Layer**: Decoupled AI abstraction layer (Mock in Phase 1, ready for LLM & RAG in Phase 2).
+* 🤖 **Offline AI Grounding Layer**: Local Python symptom extraction, retrieval, citations, and safety-first triage.
 * 📄 **Clinical Reports**: Appointment-ready medical brief generation.
 * 💬 **Health Dialogue Assistant**: Conversational clinical Q&A.
     """,

@@ -31,7 +31,7 @@ class QuestionType(str, Enum):
 
 
 STANDARD_MEDICAL_DISCLAIMER = (
-    "Healix is an AI-powered health informational triage tool and does NOT provide formal medical diagnosis. "
+    "Healix provides health information and triage guidance; it does NOT provide medical diagnosis or treatment. "
     "All summaries are educational considerations to discuss with a licensed physician. "
-    "If you experience severe warning signs, contact emergency medical services (911 / 112) immediately."
+    "If you experience severe warning signs, contact your local emergency services immediately."
 )

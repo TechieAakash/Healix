@@ -88,6 +88,6 @@ def other_auth_headers(other_user) -> dict:
 
 @pytest.fixture(autouse=True)
 def hermetic_test_ai_provider(monkeypatch):
-    """Ensure test suite runs hermetically with MockLLMProvider."""
+    """Exercise the real offline provider without external API dependencies."""
     from app.core.config import settings
-    monkeypatch.setattr(settings, "AI_PROVIDER", "mock")
+    monkeypatch.setattr(settings, "AI_PROVIDER", "local")

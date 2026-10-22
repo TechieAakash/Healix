@@ -3,11 +3,8 @@ import { Modal } from "../common/Modal";
 import { Button } from "../common/Button";
 import { Badge } from "../common/Badge";
 import {
-  BookOpen,
   ExternalLink,
   ShieldCheck,
-  CheckCircle2,
-  Database,
   Cpu,
   BotMessageSquare,
 } from "lucide-react";
@@ -100,7 +97,7 @@ export function ClinicalSourcesModal({ isOpen, onClose }) {
                   <p className="text-xs text-slate-600">
                     <strong className="text-slate-700">Covered Topics:</strong> {source.topics}
                   </p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Authority: {source.authority}
                   </p>
                 </div>
@@ -113,7 +110,7 @@ export function ClinicalSourcesModal({ isOpen, onClose }) {
                     href={source.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 text-slate-400 hover:text-teal-700 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-all"
+                    className="p-2 text-slate-500 hover:text-teal-700 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-all"
                     title="Open Source Library"
                   >
                     <ExternalLink className="w-4 h-4" />
@@ -126,7 +123,7 @@ export function ClinicalSourcesModal({ isOpen, onClose }) {
 
         {/* Verification Guarantee */}
         <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-[11px] text-slate-500 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+          <ShieldCheck className="w-4 h-4 text-teal-700 shrink-0" />
           <span>
             All sources are reviewed according to evidence-based medicine criteria (GRADE framework).
           </span>

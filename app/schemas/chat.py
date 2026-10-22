@@ -4,7 +4,15 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class MessageCreateRequest(BaseModel):
-    message: str
+    message: Optional[str] = None
+    content: Optional[str] = None
+    text: Optional[str] = None
+
+    def get_text(self) -> str:
+        val = self.message or self.content or self.text
+        if not val or not val.strip():
+            raise ValueError("Message content cannot be empty")
+        return val.strip()
 
 
 class MessageResponse(BaseModel):

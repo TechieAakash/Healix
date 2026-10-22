@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "../common/Card";
-import { Sparkles, ShieldCheck, ArrowRight, Lightbulb } from "lucide-react";
+import { Sparkles, ShieldCheck, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function HealthInsightsCard() {
@@ -41,7 +41,7 @@ export function HealthInsightsCard() {
         >
           Discuss with AI Assistant <ArrowRight className="w-3.5 h-3.5" />
         </Link>
-        <span className="text-[11px] text-slate-400">Based on recent 4 weeks</span>
+        <span className="text-[11px] text-slate-500">Based on recent 4 weeks</span>
       </div>
     </Card>
   );

@@ -22,7 +22,7 @@ class LightweightSemanticEmbeddingService(BaseEmbeddingService):
     Allows full vector search and RAG operation completely offline or during tests.
     """
 
-    def __init__(self, vector_dim: int = 128):
+    def __init__(self, vector_dim: int = 512):
         self._dim = vector_dim
 
     @property

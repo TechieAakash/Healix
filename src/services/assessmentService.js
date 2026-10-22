@@ -1,194 +1,116 @@
-import { mockAssessments } from "../data/mockData";
 import { apiRequest } from "./apiClient";
+import { adaptAssessmentToViewModel } from "./assessmentAdapter";
+import { mockAssessments } from "../data/mockData";
 
 export const assessmentService = {
-  // Analyze symptom assessment
-  async analyzeAssessment(payload) {
-    const apiRes = await apiRequest("/assessment/result", {
+  /**
+   * Initializes a real assessment on the FastAPI backend.
+   * @param {Object} params
+   * @param {string} params.description - Patient symptom description
+   * @param {Array<string>} params.symptoms - List of symptom names or symptom IDs
+   * @param {Array<Object>} [params.symptom_data] - Detailed symptom metadata (severity, location, duration)
+   */
+  async createAssessment({ description = "", symptoms = [], symptom_data = null }) {
+    const payload = {
+      description,
+      symptoms,
+      ...(symptom_data ? { symptom_data } : {}),
+    };
+    const res = await apiRequest("/assessments", {
       method: "POST",
       body: JSON.stringify(payload),
     });
-
-    if (apiRes) return apiRes;
-
-    // Simulate realistic AI + RAG triage generation
-    await new Promise((resolve) => setTimeout(resolve, 2200));
-
-    const {
-      description = "",
-      structuredSymptoms = [],
-      bodyArea = "head",
-      duration = "Few days",
-      severity = "Mild",
-      frequency = "Comes and goes",
-      answers = {},
-      hasRedFlags = false,
-    } = payload;
-
-    const symptomLabels = structuredSymptoms.map((s) => (typeof s === "string" ? s : s.label));
-    if (symptomLabels.length === 0 && description) {
-      symptomLabels.push("Unspecified Symptom");
-    }
-
-    // Determine urgency level
-    let urgencyLevel = "routine";
-    let urgencyTitle = "Routine Care Recommended";
-    let urgencyDescription =
-      "Your reported symptoms align with commonly managed conditions that can be evaluated at a routine clinic visit. Continue monitoring at home.";
-
-    if (hasRedFlags || severity === "Severe") {
-      urgencyLevel = "urgent";
-      urgencyTitle = "Prompt Medical Evaluation Advised";
-      urgencyDescription =
-        "Given the reported severity or notable symptom combinations, an in-person clinical assessment by a doctor or urgent care center within 12–24 hours is advised.";
-    }
-
-    // Dynamic possible explanations grounded in clinical literature
-    const possibleExplanations = [];
-    const textJoined = `${description} ${symptomLabels.join(" ")}`.toLowerCase();
-
-    if (textJoined.includes("head") || bodyArea === "head") {
-      possibleExplanations.push({
-        title: "Tension-type Cephalea / Headache",
-        matchLevel: "High Relevance",
-        description:
-          "Diffuse, bilateral mild-to-moderate band-like discomfort frequently triggered by physical or emotional stress, eye fatigue, dehydration, or prolonged neck muscle contraction.",
-        matchedSymptoms: symptomLabels.filter((s) => /head|fatigue|neck/i.test(s)),
-        clinicalInsight: "Characteristically non-pulsatile and without significant photophobia.",
-      });
-      possibleExplanations.push({
-        title: "Sleep Disruption & Hydration Deficit",
-        matchLevel: "Moderate Relevance",
-        description:
-          "Mild subclinical fluid deficit combined with irregular circadian rest cycles, which can manifest as dull cranial heaviness and reduced alertness.",
-        matchedSymptoms: symptomLabels.filter((s) => /fatigue|tired/i.test(s)),
-        clinicalInsight: "Generally responds well to restorative sleep and oral rehydration.",
-      });
-      possibleExplanations.push({
-        title: "Cervicogenic Strain / Postural Discomfort",
-        matchLevel: "Possible Factor",
-        description:
-          "Referred cranial sensation arising from chronic tension in the trapezius or suboccipital musculature after prolonged workstation use.",
-        matchedSymptoms: ["Neck stiffness", "Headache"],
-        clinicalInsight: "Often alleviated by ergonomic adjustments and gentle cervical mobility stretches.",
-      });
-    } else if (textJoined.includes("chest") || bodyArea === "chest") {
-      possibleExplanations.push({
-        title: "Musculoskeletal Chest Wall Strain (Costochondritis)",
-        matchLevel: "Common Consideration",
-        description:
-          "Localized discomfort in the cartilage connecting the ribs to the breastbone. Frequently tender to direct palpation and aggravated by twisting or deep inhalation.",
-        matchedSymptoms: ["Chest discomfort"],
-        clinicalInsight: "Must always be differentiated from cardiac etiology by an in-person physician.",
-      });
-      possibleExplanations.push({
-        title: "Gastroesophageal Reflux Discomfort",
-        matchLevel: "Moderate Relevance",
-        description:
-          "Gastric acid irritation of the esophageal lining producing substernal sensation, often worse after meals or when lying supine.",
-        matchedSymptoms: ["Chest discomfort", "Stomach pain"],
-        clinicalInsight: "Commonly associated with an acidic or sour taste in the mouth.",
-      });
-    } else if (textJoined.includes("cough") || textJoined.includes("throat") || bodyArea === "throat") {
-      possibleExplanations.push({
-        title: "Upper Respiratory Viral Irritation",
-        matchLevel: "High Relevance",
-        description:
-          "Transient inflammation of the pharyngeal and tracheal passages following seasonal viral contact, typically self-limiting in healthy adults.",
-        matchedSymptoms: symptomLabels.filter((s) => /cough|throat|fever/i.test(s)),
-        clinicalInsight: "Expected duration is typically 7 to 10 days.",
-      });
-    } else {
-      possibleExplanations.push({
-        title: "Transient Functional Fatigue & Physical Strain",
-        matchLevel: "High Relevance",
-        description:
-          "A non-specific constellation of mild physical symptoms secondary to cumulative fatigue, mild physiological stressors, or recovery from exertion.",
-        matchedSymptoms: symptomLabels,
-        clinicalInsight: "Monitoring symptom trajectory over the next 48 hours is standard practice.",
-      });
-    }
-
-    const newAssessment = {
-      id: `asm_${Date.now()}`,
-      date: "Today, Oct 2, 2026",
-      timestamp: new Date().toISOString(),
-      symptoms: symptomLabels.length ? symptomLabels : ["General discomfort"],
-      primarySymptom: symptomLabels.slice(0, 2).join(" & ") || "Reported symptoms",
-      bodyArea,
-      duration,
-      severity,
-      frequency,
-      urgencyLevel,
-      urgencyTitle,
-      urgencyDescription,
-      status: "Completed",
-      possibleExplanations,
-      selfCareGuidance: [
-        "Prioritize scheduled rest in a quiet, temperate environment.",
-        "Ensure consistent hydration (water and clear broths, minimizing excessive caffeine).",
-        "Keep a concise log of symptom timing, triggers, and changes.",
-        "Refrain from unprescribed medications or strenuous physical workouts until fully resolved.",
-      ],
-      warningSignsToWatch: [
-        "Sudden, unbearable progression in pain or severe new symptoms",
-        "Onset of shortness of breath, chest pressure, or lightheadedness",
-        "Persistent high fever exceeding 38.5°C (101.3°F)",
-        "New neurological signs (sudden numbness, weakness, confusion, or speech changes)",
-      ],
-      sources: [
-        {
-          name: "Mayo Clinic",
-          topic: "Clinical Decision & Symptom Assessment",
-          url: "https://www.mayoclinic.org",
-          retrievalDate: "October 2026",
-          authority: "Evidence-Based Clinical Summaries",
-        },
-        {
-          name: "World Health Organization (WHO)",
-          topic: "Triage Principles & Primary Care Standards",
-          url: "https://www.who.int",
-          retrievalDate: "2026",
-          authority: "WHO Primary Healthcare Technical Series",
-        },
-        {
-          name: "National Health Service (NHS UK)",
-          topic: "Health Information & Self-Management Guidance",
-          url: "https://www.nhs.uk",
-          retrievalDate: "2026",
-          authority: "NHS Clinical Guidelines Framework",
-        },
-      ],
-    };
-
-    // Store in history
-    this.saveToStorage(newAssessment);
-    return newAssessment;
+    return res; // { assessment_id, status }
   },
 
-  getAllAssessments() {
+  /**
+   * Generates or fetches context-aware follow-up triage questions from backend.
+   */
+  async getFollowUpQuestions(assessmentId) {
+    const res = await apiRequest(`/assessments/${assessmentId}/questions`, {
+      method: "POST",
+    });
+    return res.questions || [];
+  },
+
+  /**
+   * Submits an answer to a specific follow-up question.
+   */
+  async submitAnswer(assessmentId, questionId, answer) {
+    const res = await apiRequest(`/assessments/${assessmentId}/answers`, {
+      method: "POST",
+      body: JSON.stringify({
+        question_id: questionId,
+        answer: String(answer),
+      }),
+    });
+    return res;
+  },
+
+  /**
+   * Executes deterministic safety triage & RAG analysis on the backend.
+   */
+  async analyzeAssessment(assessmentId) {
+    const res = await apiRequest(`/assessments/${assessmentId}/analyze`, {
+      method: "POST",
+    });
+    return res;
+  },
+
+  /**
+   * Retrieves full details, questions, answers, and clinical report for an assessment.
+   */
+  async getAssessmentById(id) {
     try {
-      const stored = localStorage.getItem("healix_assessments");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const raw = await apiRequest(`/assessments/${id}`);
+      if (raw) {
+        return adaptAssessmentToViewModel(raw);
       }
-    } catch (e) {
-      console.error("Storage error:", e);
+    } catch (err) {
+      // If it's a known mock ID (e.g., asm_101), return the mock template
+      const mock = mockAssessments.find((a) => a.id === id);
+      if (mock) {
+        return { ...mock, isDemo: true };
+      }
+      throw err;
     }
-    // Default to mock data
-    return mockAssessments;
+    return null;
   },
 
-  getAssessmentById(id) {
-    const list = this.getAllAssessments();
-    return list.find((a) => a.id === id) || mockAssessments[0];
+  /**
+   * Lists patient assessments timeline.
+   */
+  async getAllAssessments(page = 1, pageSize = 20) {
+    try {
+      const res = await apiRequest(`/assessments?page=${page}&page_size=${pageSize}`);
+      if (res && res.items) {
+        return res.items.map((item) => adaptAssessmentToViewModel(item));
+      }
+    } catch (err) {
+      // In offline/unauthenticated mock mode, fallback to mock data
+      console.warn("[assessmentService] Backend assessments unavailable, using local mock data:", err.message);
+      return mockAssessments.map((a) => ({ ...a, isDemo: true }));
+    }
+    return [];
   },
 
-  saveToStorage(assessment) {
-    const list = this.getAllAssessments();
-    const updated = [assessment, ...list.filter((a) => a.id !== assessment.id)];
-    localStorage.setItem("healix_assessments", JSON.stringify(updated));
-    return updated;
+  /**
+   * Saves local offline assessment (used for unauthenticated drafts).
+   */
+  saveDraftLocally(draft) {
+    localStorage.setItem("healix_draft_assessment", JSON.stringify(draft));
+  },
+
+  getDraftLocally() {
+    try {
+      const stored = localStorage.getItem("healix_draft_assessment");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  clearDraftLocally() {
+    localStorage.removeItem("healix_draft_assessment");
   },
 };

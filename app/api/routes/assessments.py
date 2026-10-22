@@ -71,8 +71,9 @@ def get_assessment(
     return service.get_assessment(id, current_user.id)
 
 
-@router.post(
+@router.api_route(
     "/{id}/questions",
+    methods=["GET", "POST"],
     response_model=FollowUpQuestionsListResponse,
     summary="Generate or retrieve follow-up triage questions",
     description="Retrieves or generates context-aware follow-up questions to refine clinical intake.",
@@ -90,6 +91,9 @@ async def get_follow_up_questions(
             question=q.question,
             type=q.question_type,
             order_index=q.order_index,
+            reasoning=q.reasoning,
+            evidence_code=q.evidence_code,
+            options=["Yes", "No", "Not sure"] if q.evidence_code else None,
         )
         for q in questions
     ]

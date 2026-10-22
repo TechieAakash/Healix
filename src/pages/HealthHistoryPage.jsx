@@ -8,48 +8,35 @@ import { Button } from "../components/common/Button";
 import { Card } from "../components/common/Card";
 import {
   History,
-  Filter,
   Search,
   PlusCircle,
-  Calendar,
-  AlertTriangle,
-  CheckCircle2,
-  Trash2,
 } from "lucide-react";
 
 export function HealthHistoryPage() {
   const [searchParams] = useSearchParams();
   const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState("all"); // 'all' | 'urgent' | 'routine' | 'completed'
+  const [activeFilter, setActiveFilter] = useState("all"); // 'all' | 'recent' | 'urgent' | 'completed'
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const data = await historyService.filterHistory({
-        filter: activeFilter,
-        searchQuery,
-      });
-      setAssessments(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
-  }, [activeFilter, searchQuery]);
+    let isCurrent = true;
+    historyService
+      .filterHistory({ filter: activeFilter, searchQuery })
+      .then((data) => {
+        if (isCurrent) setAssessments(data);
+      })
+      .catch((e) => {
+        console.error("Failed to load history:", e);
+      })
+      .finally(() => {
+        if (isCurrent) setLoading(false);
+      });
 
-  const handleDelete = async (id, e) => {
-    e.preventDefault();
-    if (confirm("Are you sure you want to remove this assessment record?")) {
-      const updated = await historyService.deleteRecord(id);
-      setAssessments(updated);
-    }
-  };
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeFilter, searchQuery]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
@@ -57,7 +44,7 @@ export function HealthHistoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <History className="w-7 h-7 text-teal-600" />
+            <History className="w-7 h-7 text-emerald-700" />
             Health History Log
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -66,7 +53,7 @@ export function HealthHistoryPage() {
         </div>
 
         <Link to="/symptom-checker">
-          <Button variant="teal" size="sm" icon={PlusCircle}>
+          <Button variant="primary" size="sm" icon={PlusCircle}>
             New Assessment
           </Button>
         </Link>
@@ -99,13 +86,13 @@ export function HealthHistoryPage() {
 
           {/* Search field */}
           <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Search symptoms..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 outline-none focus:border-teal-600 focus:bg-white"
+              className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 outline-none focus:border-emerald-600 focus:bg-white"
             />
           </div>
         </div>

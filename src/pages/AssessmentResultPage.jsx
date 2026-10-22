@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { assessmentService } from "../services/assessmentService";
 import { Card } from "../components/common/Card";
 import { Button } from "../components/common/Button";
@@ -9,37 +9,81 @@ import { SourceCitation } from "../components/common/SourceCitation";
 import { Modal } from "../components/common/Modal";
 import {
   Calendar,
-  Stethoscope,
   Info,
-  ShieldCheck,
   AlertTriangle,
-  HeartPulse,
   Printer,
   Share2,
-  BotMessageSquare,
-  ArrowRight,
-  CheckCircle2,
-  ExternalLink,
-  ChevronRight,
   Sparkles,
+  ChevronRight,
+  CheckCircle2,
 } from "lucide-react";
 
 export function AssessmentResultPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [assessment, setAssessment] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeModalExplanation, setActiveModalExplanation] = useState(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const data = assessmentService.getAssessmentById(id);
-    setAssessment(data);
+    let isMounted = true;
+    async function loadData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await assessmentService.getAssessmentById(id);
+        if (isMounted) {
+          if (data) {
+            setAssessment(data);
+          } else {
+            setError("Assessment record not found.");
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error("Failed to load assessment:", err);
+          setError(err.message || "Unable to load assessment summary.");
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    loadData();
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
-  if (!assessment) {
+  if (loading) {
     return (
-      <div className="max-w-3xl mx-auto py-12 text-center">
-        <p className="text-slate-500">Loading assessment summary...</p>
+      <div className="max-w-3xl mx-auto py-16 text-center space-y-3">
+        <div className="w-8 h-8 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs text-slate-500 font-medium">Loading clinical assessment brief...</p>
+      </div>
+    );
+  }
+
+  if (error || !assessment) {
+    return (
+      <div className="max-w-lg mx-auto py-16 text-center bg-white rounded-2xl border border-slate-200 p-8 space-y-4">
+        <AlertTriangle className="w-8 h-8 text-amber-600 mx-auto" />
+        <h3 className="text-base font-bold text-slate-900">Assessment Unavailable</h3>
+        <p className="text-xs text-slate-600 leading-relaxed">
+          {error || "Could not retrieve the requested health assessment record."}
+        </p>
+        <div className="pt-2 flex justify-center gap-3">
+          <Link to="/symptom-checker">
+            <Button variant="outline" size="sm">
+              New Symptom Check
+            </Button>
+          </Link>
+          <Link to="/history">
+            <Button variant="primary" size="sm">
+              View History Log
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -52,13 +96,28 @@ export function AssessmentResultPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
+      {/* Demo Mode Notice if viewing a demo mock template */}
+      {assessment.isDemo && (
+        <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between text-xs text-amber-900">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>
+              <strong>Demonstration Mode:</strong> Viewing standard reference clinical report. To analyze live patient symptoms, use the Symptom Checker.
+            </span>
+          </div>
+          <Link to="/symptom-checker" className="shrink-0 font-bold underline hover:text-amber-950">
+            Start Live Check
+          </Link>
+        </div>
+      )}
+
       {/* ================= HEADER SECTION ================= */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200/80 text-teal-800 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-              <span>Evidence-Grounded Triage Report</span>
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Health Triage Summary</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Your Health Summary
@@ -78,7 +137,7 @@ export function AssessmentResultPage() {
               {copied ? "Link Copied!" : "Share Link"}
             </Button>
             <Link to={`/report/${assessment.id}`}>
-              <Button variant="teal" size="sm" icon={Printer}>
+              <Button variant="primary" size="sm" icon={Printer}>
                 Print Doctor Report
               </Button>
             </Link>
@@ -88,7 +147,7 @@ export function AssessmentResultPage() {
         {/* Assessment metadata snapshot */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1 text-xs">
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-slate-400 block font-medium">Assessment Date</span>
+            <span className="text-slate-500 block font-medium">Assessment Date</span>
             <span className="text-slate-900 font-semibold mt-0.5 block flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 text-slate-500" />
               {assessment.date}
@@ -96,14 +155,14 @@ export function AssessmentResultPage() {
           </div>
 
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-slate-400 block font-medium">Symptoms Analyzed</span>
+            <span className="text-slate-500 block font-medium">Symptoms Analyzed</span>
             <span className="text-slate-900 font-semibold mt-0.5 block truncate">
               {assessment.symptoms?.join(", ")}
             </span>
           </div>
 
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-slate-400 block font-medium">Reported Timeline & Severity</span>
+            <span className="text-slate-500 block font-medium">Reported Timeline & Severity</span>
             <span className="text-slate-900 font-semibold mt-0.5 block">
               {assessment.duration || "Recent"} • {assessment.severity || "Mild"}
             </span>
@@ -122,10 +181,10 @@ export function AssessmentResultPage() {
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-            Possible explanations to discuss with a healthcare professional
+            Health information and next steps
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-            The following are clinical considerations matching your reported patterns. <strong>They are not formal medical diagnoses.</strong> Use them as discussion points with your physician.
+            Healix provides triage guidance, not a diagnosis. It will only show possible topics when supported by the assessment data.
           </p>
         </div>
 
@@ -151,7 +210,7 @@ export function AssessmentResultPage() {
                   {/* Matched symptoms tags */}
                   {exp.matchedSymptoms && exp.matchedSymptoms.length > 0 && (
                     <div className="pt-2 flex flex-wrap items-center gap-1.5 text-xs">
-                      <span className="text-slate-400 font-medium">Relevant symptoms:</span>
+                      <span className="text-slate-500 font-medium">Relevant symptoms:</span>
                       {exp.matchedSymptoms.map((sym, sIdx) => (
                         <span
                           key={sIdx}
@@ -177,13 +236,18 @@ export function AssessmentResultPage() {
               </div>
             </Card>
           ))}
+          {(!assessment.possibleExplanations || assessment.possibleExplanations.length === 0) && (
+            <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+              No specific cause is suggested. Review the urgency guidance and seek professional advice if symptoms persist, worsen, or concern you.
+            </p>
+          )}
         </div>
       </div>
 
       {/* ================= WHAT YOU CAN DO NOW ================= */}
       <Card padding="default" className="border-teal-100 bg-teal-50/30 space-y-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-teal-600 text-white">
+          <div className="p-1.5 rounded-lg bg-teal-700 text-white">
             <CheckCircle2 className="w-4 h-4" />
           </div>
           <h3 className="text-base font-bold text-slate-900">What you can do now</h3>
@@ -194,7 +258,7 @@ export function AssessmentResultPage() {
         <ul className="space-y-2 pt-1">
           {assessment.selfCareGuidance?.map((item, idx) => (
             <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-800">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-600 mt-2 shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-700 mt-2 shrink-0" />
               <span>{item}</span>
             </li>
           ))}

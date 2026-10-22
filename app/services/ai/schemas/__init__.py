@@ -42,19 +42,20 @@ class FollowUpQuestionsResponse(BaseModel):
         return v[:7]
 
 
-class PossibleExplanationItem(BaseModel):
-    title: str = Field(description="Educational clinical explanation title (NOT a diagnosis)")
-    description: str = Field(description="Objective clinical background and pathophysiology")
-    supporting_information: List[str] = Field(default_factory=list)
-    match_level: Optional[str] = Field(default="Possible Consideration")
-
-
 class SourceCitation(BaseModel):
     title: str = Field(description="Document title or guideline name")
     organization: str = Field(description="Authoritative source organization, e.g. WHO, Mayo Clinic, CDC")
     url: Optional[str] = Field(default=None, description="Verified URL from knowledge base")
     relevance: Optional[float] = Field(default=0.9, description="Semantic relevance score (0.0 - 1.0)")
     topic: Optional[str] = Field(default=None)
+
+
+class PossibleExplanationItem(BaseModel):
+    title: str = Field(description="Educational clinical explanation title (NOT a diagnosis)")
+    description: str = Field(description="Objective clinical background and pathophysiology")
+    supporting_information: List[str] = Field(default_factory=list)
+    match_level: Optional[str] = Field(default="Possible Consideration")
+    sources: List[SourceCitation] = Field(default_factory=list)
 
 
 class SymptomAnalysisResponse(BaseModel):

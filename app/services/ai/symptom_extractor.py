@@ -85,9 +85,14 @@ NORMALIZATION_MAP: Dict[str, str] = {
 }
 
 
+from app.services.clinical.symptom_engine import symptom_engine
+from app.services.clinical.text_normalizer import clean_clinical_text
+
+
 class SymptomExtractor:
     """
     Extracts structured symptoms from patient text and applies ontology normalization.
+    Prioritizes deterministic Python ontology extraction for reliable safety and zero-downtime offline execution.
     """
 
     def __init__(self, llm_provider: Optional[BaseLLMProvider] = None):
@@ -107,7 +112,7 @@ class SymptomExtractor:
     async def extract_and_normalize(self, text: str) -> Dict[str, Any]:
         """
         Main extraction entry point.
-        Extracts structured entities, normalizes terms, and preserves original text.
+        Uses deterministic Python symptom engine first, ensuring core triage runs safely without LLM.
         """
         if not text or not text.strip():
             return {
@@ -117,94 +122,72 @@ class SymptomExtractor:
                 "raw_input_summary": "Empty input provided.",
             }
 
-        prompt = EXTRACTION_USER_PROMPT_TEMPLATE.format(user_input=text.strip())
+        # Step 1: Run deterministic Python symptom engine
+        deterministic_result = symptom_engine.extract(text)
+        active_symptoms = deterministic_result["active_symptoms"]
 
+        # Check for associated features
+        lower = text.lower()
+        associated_features = []
+        if "bright light" in lower or "photophobia" in lower or "light sensitivity" in lower:
+            associated_features.append("photophobia / light sensitivity")
+        if "sound" in lower or "phonophobia" in lower:
+            associated_features.append("phonophobia / sound sensitivity")
+
+        normalized_symptoms = []
+        for s in active_symptoms:
+            norm_name = self.normalize_term(s["canonical_name"])
+            normalized_symptoms.append({
+                "original_name": s.get("original_phrase", s["canonical_name"]),
+                "normalized_name": norm_name,
+                "name": norm_name,
+                "location": s.get("body_location") or "unspecified",
+                "severity": s.get("severity_label") or "moderate",
+                "duration": s.get("duration") or "unspecified",
+                "extraction_type": "explicit",
+            })
+
+        # If deterministic extraction found symptoms or LLM is not needed, return immediately
+        if normalized_symptoms:
+            return {
+                "original_text": text,
+                "normalized_symptoms": normalized_symptoms,
+                "associated_features": associated_features,
+                "raw_input_summary": f"Extracted {len(normalized_symptoms)} structured symptoms via deterministic clinical ontology.",
+            }
+
+        # Step 2: If deterministic engine didn't match and LLM is available, try LLM as fallback
         try:
+            prompt = EXTRACTION_USER_PROMPT_TEMPLATE.format(user_input=text.strip())
             extraction_res: SymptomExtractionResponse = await self.llm.generate_structured(
                 schema=SymptomExtractionResponse,
                 prompt=prompt,
                 system_prompt=EXTRACTION_SYSTEM_PROMPT,
                 temperature=0.1,
             )
+            for s in extraction_res.symptoms:
+                norm_name = self.normalize_term(s.name)
+                normalized_symptoms.append({
+                    "original_name": s.name,
+                    "normalized_name": norm_name,
+                    "name": norm_name,
+                    "location": s.location or "unspecified",
+                    "severity": s.severity or "unknown",
+                    "duration": s.duration or "unknown",
+                    "extraction_type": s.extraction_type or "explicit",
+                })
+            return {
+                "original_text": text,
+                "normalized_symptoms": normalized_symptoms,
+                "associated_features": extraction_res.associated_features or associated_features,
+                "raw_input_summary": extraction_res.raw_input_summary or f"Extracted {len(normalized_symptoms)} symptoms from input.",
+            }
         except Exception as e:
-            logger.warning("LLM symptom extraction failed (%s). Falling back to rule-based extractor.", str(e))
-            extraction_res = self._fallback_rule_based_extractor(text)
-
-        # Normalize extracted symptom names while recording original identifiers
-        normalized_symptoms = []
-        for s in extraction_res.symptoms:
-            norm_name = self.normalize_term(s.name)
-            normalized_symptoms.append({
-                "original_name": s.name,
-                "normalized_name": norm_name,
-                "name": norm_name,
-                "location": s.location or "unspecified",
-                "severity": s.severity or "unknown",
-                "duration": s.duration or "unknown",
-                "extraction_type": s.extraction_type or "explicit",
-            })
+            logger.info("LLM symptom extraction omitted or failed (%s). Using deterministic output.", str(e))
 
         return {
             "original_text": text,
-            "normalized_symptoms": normalized_symptoms,
-            "associated_features": extraction_res.associated_features,
-            "raw_input_summary": extraction_res.raw_input_summary or f"Extracted {len(normalized_symptoms)} symptoms from input.",
+            "normalized_symptoms": [],
+            "associated_features": associated_features,
+            "raw_input_summary": "Unspecified health inquiry or non-specific symptoms.",
         }
-
-    def _fallback_rule_based_extractor(self, text: str) -> SymptomExtractionResponse:
-        """Deterministic regex-based fallback extractor for zero-downtime resiliency."""
-        lower = text.lower()
-        symptoms = []
-        associated = []
-
-        if "head" in lower:
-            loc = "right side" if "right" in lower else ("left side" if "left" in lower else "bilateral")
-            dur = "1 day" if "yesterday" in lower or "1 day" in lower else "unspecified"
-            symptoms.append(ExtractedSymptomItem(
-                name="headache",
-                location=loc,
-                severity="moderate",
-                duration=dur,
-                extraction_type="inferred" if "headache" not in lower else "explicit",
-            ))
-        if "nausea" in lower or "nauseous" in lower or "sick" in lower:
-            symptoms.append(ExtractedSymptomItem(
-                name="nausea",
-                location="systemic",
-                severity="mild",
-                duration="unspecified",
-                extraction_type="explicit",
-            ))
-        if "light" in lower or "photophobia" in lower:
-            associated.append("photophobia / light sensitivity")
-        if "chest" in lower:
-            symptoms.append(ExtractedSymptomItem(
-                name="chest discomfort",
-                location="retrosternal",
-                severity="moderate",
-                duration="unspecified",
-                extraction_type="explicit",
-            ))
-        if "fever" in lower or "hot" in lower:
-            symptoms.append(ExtractedSymptomItem(
-                name="fever",
-                location="systemic",
-                severity="moderate",
-                duration="unspecified",
-                extraction_type="explicit",
-            ))
-
-        if not symptoms:
-            symptoms.append(ExtractedSymptomItem(
-                name="unspecified health concern",
-                location="unspecified",
-                severity="unknown",
-                duration="unknown",
-                extraction_type="unknown",
-            ))
-
-        return SymptomExtractionResponse(
-            symptoms=symptoms,
-            associated_features=associated,
-            raw_input_summary="Fallback rule-based extraction performed.",
-        )

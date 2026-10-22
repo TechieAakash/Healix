@@ -1,356 +1,340 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
-import { Card, CardHeader } from "../components/common/Card";
-import { Button } from "../components/common/Button";
-import { Input, Select } from "../components/common/FormControls";
 import {
-  User,
+  KeyRound,
   Shield,
-  Bell,
-  Globe,
-  Lock,
+  HelpCircle,
+  LogOut,
+  ChevronRight,
   CheckCircle2,
-  Trash2,
-  Download,
-  ShieldCheck,
-  Eye,
+  X,
 } from "lucide-react";
 
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("profile");
+  const navigate = useNavigate();
   const [user, setUser] = useState(authService.getCurrentUser());
-  const [formData, setFormData] = useState({
-    name: user?.name || "Aakash",
-    fullName: user?.fullName || "Aakash Sharma",
-    email: user?.email || "aakash@example.com",
-    dateOfBirth: user?.dateOfBirth || "1996-08-14",
-    gender: user?.gender || "Male",
-    bloodGroup: user?.bloodGroup || "O+",
-  });
-
-  const [privacySettings, setPrivacySettings] = useState({
-    saveHistory: user?.settings?.saveHistory ?? true,
-    personalizeInsights: user?.settings?.personalizeInsights ?? true,
-    emailAlerts: user?.settings?.emailAlerts ?? true,
-    assessmentReminders: user?.settings?.assessmentReminders ?? true,
-    language: user?.settings?.language || "en",
-  });
-
+  const [activeTab, setActiveTab] = useState("Profile");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
 
-  const handleSaveProfile = async (e) => {
+  const [editForm, setEditForm] = useState({
+    fullName: user?.fullName || "Krish Alagh",
+    dateOfBirth: user?.dateOfBirth || "15 Jan 2006",
+    gender: user?.gender || "Male",
+    bloodGroup: user?.bloodGroup || "O+",
+    height: user?.height || "178 cm",
+    weight: user?.weight || "72 kg",
+  });
+
+  const tabs = ["Profile", "Health Data", "Notifications", "Preferences"];
+
+  const handleSaveProfile = (e) => {
     e.preventDefault();
-    const updated = await authService.updateProfile({
-      ...formData,
-      settings: privacySettings,
+    const updated = authService.updateProfile({
+      ...user,
+      ...editForm,
+      name: editForm.fullName.split(" ")[0],
     });
     setUser(updated);
+    setShowEditModal(false);
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 2500);
   };
 
-  const handleToggle = (key) => {
-    setPrivacySettings((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      authService.updateProfile({ settings: next });
-      return next;
-    });
-    setSavedToast(true);
-    setTimeout(() => setSavedToast(false), 2000);
+  const handleLogout = () => {
+    authService.logout();
+    navigate("/login");
   };
 
-  const tabs = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "privacy", label: "Privacy & Data", icon: Shield },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "language", label: "Language", icon: Globe },
+  const personalInfo = [
+    { label: "Full Name", value: user?.fullName || "Krish Alagh" },
+    { label: "Date of Birth", value: user?.dateOfBirth || "15 Jan 2006" },
+    { label: "Gender", value: user?.gender || "Male" },
+    { label: "Blood Group", value: user?.bloodGroup || "O+" },
+    { label: "Height", value: user?.height || "178 cm" },
+    { label: "Weight", value: user?.weight || "72 kg" },
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Toast Alert */}
+      {savedToast && (
+        <div className="fixed top-20 right-8 z-50 flex items-center gap-2 bg-emerald-800 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+          <span>Profile updated successfully</span>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Settings & Preferences
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Manage your personal profile, encrypted health records, and privacy toggles.
-          </p>
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+          Profile & Settings
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          Manage your personal details and account configurations.
+        </p>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200 pb-2 overflow-x-auto">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === tab
+                ? "bg-emerald-50 text-emerald-800"
+                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* User Profile Card */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-emerald-800 text-white font-bold text-lg flex items-center justify-center shrink-0 shadow-xs">
+            {user?.avatarInitials || "KA"}
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900">{user?.fullName || "Krish Alagh"}</h2>
+            <p className="text-xs text-slate-400 mt-0.5">{user?.email || "krish@example.com"}</p>
+          </div>
         </div>
 
-        {savedToast && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold animate-fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Settings saved</span>
-          </div>
-        )}
+        <button
+          onClick={() => setShowEditModal(true)}
+          className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors cursor-pointer self-start sm:self-auto"
+        >
+          Edit Profile
+        </button>
       </div>
 
-      {/* Tabs navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                isActive
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+      {/* Personal Information Section */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+          Personal Information
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 pt-1">
+          {personalInfo.map((info, idx) => (
+            <div key={idx} className="space-y-1">
+              <span className="text-[11px] font-medium text-slate-400 block">{info.label}</span>
+              <span className="text-xs sm:text-sm font-semibold text-slate-800 block">{info.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* ================= TAB 1: PROFILE ================= */}
-      {activeTab === "profile" && (
-        <Card padding="default" className="shadow-xs">
-          <CardHeader
-            title="Personal Profile Information"
-            subtitle="Used to provide personalized triage context on symptoms and clinical intake briefs."
-          />
-          <form onSubmit={handleSaveProfile} className="space-y-4 pt-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Full Name"
-                value={formData.fullName}
-                onChange={(e) =>
-                  setFormData({ ...formData, fullName: e.target.value })
-                }
-                required
-              />
-              <Input
-                label="Email Address"
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                required
-              />
-              <Input
-                label="Date of Birth"
-                type="date"
-                value={formData.dateOfBirth}
-                onChange={(e) =>
-                  setFormData({ ...formData, dateOfBirth: e.target.value })
-                }
-                required
-              />
-              <Select
-                label="Biological Sex / Gender"
-                value={formData.gender}
-                onChange={(e) =>
-                  setFormData({ ...formData, gender: e.target.value })
-                }
-                options={[
-                  { value: "Male", label: "Male" },
-                  { value: "Female", label: "Female" },
-                  { value: "Other", label: "Other / Prefer not to say" },
-                ]}
-              />
-            </div>
+      {/* Account Settings Section */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-3">
+        <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+          Account Settings
+        </h3>
 
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <Button type="submit" variant="teal" size="sm">
-                Save Changes
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-
-      {/* ================= TAB 2: PRIVACY & DATA ================= */}
-      {activeTab === "privacy" && (
-        <div className="space-y-6">
-          <Card padding="default" className="shadow-xs space-y-5">
-            <CardHeader
-              title="Health Data & Triage Privacy Controls"
-              subtitle="Control how your symptom history is retained and utilized."
-            />
-
-            {/* Toggle 1: Save assessment history */}
-            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
-              <div className="space-y-0.5 max-w-lg">
-                <h4 className="text-sm font-bold text-slate-900">
-                  Save assessment history
-                </h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Allows Healix to display your previous assessments and longitudinal symptom progression in your patient dashboard.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleToggle("saveHistory")}
-                className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  privacySettings.saveHistory ? "bg-teal-600" : "bg-slate-300"
-                }`}
-              >
-                <span
-                  className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${
-                    privacySettings.saveHistory ? "right-1" : "left-1"
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Toggle 2: Use data for personalization */}
-            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
-              <div className="space-y-0.5 max-w-lg">
-                <h4 className="text-sm font-bold text-slate-900">
-                  Use my data to improve personalization
-                </h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Synthesizes recurring patterns (such as persistent fatigue across multiple assessments) to offer helpful non-diagnostic insights.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleToggle("personalizeInsights")}
-                className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  privacySettings.personalizeInsights ? "bg-teal-600" : "bg-slate-300"
-                }`}
-              >
-                <span
-                  className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${
-                    privacySettings.personalizeInsights ? "right-1" : "left-1"
-                  }`}
-                />
-              </button>
-            </div>
-          </Card>
-
-          {/* Export / Delete Data */}
-          <Card padding="default" className="shadow-xs border-rose-200 bg-rose-50/20">
-            <h4 className="text-sm font-bold text-rose-950 uppercase tracking-wider mb-2">
-              Data Management & Purge
-            </h4>
-            <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-              You own all medical intake briefs and symptom logs. You can export an encrypted archive or permanently wipe all records.
-            </p>
+        <div className="divide-y divide-slate-100">
+          {/* Change Password */}
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="w-full flex items-center justify-between py-3.5 hover:bg-slate-50/70 px-2 rounded-xl transition-colors text-left cursor-pointer group"
+          >
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                icon={Download}
-                onClick={() => alert("Encrypted JSON archive exported to your downloads.")}
-              >
-                Export Health Data
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                icon={Trash2}
-                onClick={() => {
-                  if (confirm("Are you sure? This will wipe your locally stored assessments.")) {
-                    localStorage.removeItem("healix_assessments");
-                    alert("Assessment records wiped.");
-                    window.location.reload();
-                  }
-                }}
-              >
-                Delete All Health Records
-              </Button>
+              <KeyRound className="w-4 h-4 text-slate-500 group-hover:text-emerald-700" />
+              <span className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-slate-900">
+                Change Password
+              </span>
             </div>
-          </Card>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform group-hover:translate-x-0.5" />
+          </button>
+
+          {/* Privacy & Security */}
+          <button
+            onClick={() => alert("Privacy settings are managed under Client Encryption Mode.")}
+            className="w-full flex items-center justify-between py-3.5 hover:bg-slate-50/70 px-2 rounded-xl transition-colors text-left cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <Shield className="w-4 h-4 text-slate-500 group-hover:text-emerald-700" />
+              <span className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-slate-900">
+                Privacy & Security
+              </span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform group-hover:translate-x-0.5" />
+          </button>
+
+          {/* Help & Support */}
+          <button
+            onClick={() => navigate("/assistant")}
+            className="w-full flex items-center justify-between py-3.5 hover:bg-slate-50/70 px-2 rounded-xl transition-colors text-left cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <HelpCircle className="w-4 h-4 text-slate-500 group-hover:text-emerald-700" />
+              <span className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-slate-900">
+                Help & Support
+              </span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform group-hover:translate-x-0.5" />
+          </button>
+
+          {/* Log Out */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-between py-3.5 hover:bg-red-50/50 px-2 rounded-xl transition-colors text-left cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <LogOut className="w-4 h-4 text-rose-500" />
+              <span className="text-xs sm:text-sm font-medium text-rose-600">
+                Log Out
+              </span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-rose-300 transition-transform group-hover:translate-x-0.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h4 className="text-sm font-bold text-slate-900">Edit Personal Information</h4>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-3 mt-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={editForm.fullName}
+                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Date of Birth</label>
+                <input
+                  type="text"
+                  value={editForm.dateOfBirth}
+                  onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Gender</label>
+                  <select
+                    value={editForm.gender}
+                    onChange={(e) => setEditForm({ ...editForm, gender: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none bg-white"
+                  >
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Blood Group</label>
+                  <input
+                    type="text"
+                    value={editForm.bloodGroup}
+                    onChange={(e) => setEditForm({ ...editForm, bloodGroup: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Height</label>
+                  <input
+                    type="text"
+                    value={editForm.height}
+                    onChange={(e) => setEditForm({ ...editForm, height: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Weight</label>
+                  <input
+                    type="text"
+                    value={editForm.weight}
+                    onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:border-emerald-700 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-medium bg-[#065f46] hover:bg-[#064e3b] text-white rounded-xl shadow-xs"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
-      {/* ================= TAB 3: NOTIFICATIONS ================= */}
-      {activeTab === "notifications" && (
-        <Card padding="default" className="shadow-xs space-y-5">
-          <CardHeader
-            title="Notification Preferences"
-            subtitle="Choose when Healix contacts you with follow-up reminders."
-          />
-
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
-            <div className="space-y-0.5">
-              <h4 className="text-sm font-bold text-slate-900">Email notifications</h4>
-              <p className="text-xs text-slate-500">
-                Receive printable summary copies and medical source citations by email.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleToggle("emailAlerts")}
-              className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                privacySettings.emailAlerts ? "bg-teal-600" : "bg-slate-300"
-              }`}
-            >
-              <span
-                className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${
-                  privacySettings.emailAlerts ? "right-1" : "left-1"
-                }`}
+      {/* Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <h4 className="text-sm font-bold text-slate-900 mb-2">Change Password</h4>
+            <div className="space-y-3">
+              <input
+                type="password"
+                placeholder="Current password"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl"
               />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
-            <div className="space-y-0.5">
-              <h4 className="text-sm font-bold text-slate-900">Assessment check-in reminders</h4>
-              <p className="text-xs text-slate-500">
-                Gentle reminders 48 hours after an assessment to track whether symptoms have improved.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleToggle("assessmentReminders")}
-              className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                privacySettings.assessmentReminders ? "bg-teal-600" : "bg-slate-300"
-              }`}
-            >
-              <span
-                className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${
-                  privacySettings.assessmentReminders ? "right-1" : "left-1"
-                }`}
+              <input
+                type="password"
+                placeholder="New password"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl"
               />
-            </button>
-          </div>
-        </Card>
-      )}
-
-      {/* ================= TAB 4: LANGUAGE ================= */}
-      {activeTab === "language" && (
-        <Card padding="default" className="shadow-xs space-y-4">
-          <CardHeader
-            title="Language & Accessibility"
-            subtitle="Select your preferred language for symptom intake and triage explanations."
-          />
-
-          <div className="max-w-xs space-y-2">
-            <Select
-              label="Display Language"
-              value={privacySettings.language}
-              onChange={(e) => {
-                const val = e.target.value;
-                setPrivacySettings((prev) => ({ ...prev, language: val }));
-                setSavedToast(true);
-                setTimeout(() => setSavedToast(false), 2000);
-              }}
-              options={[
-                { value: "en", label: "English (US / International)" },
-                { value: "hi", label: "हिन्दी (Hindi)" },
-                { value: "es", label: "Español (Spanish)" },
-              ]}
-            />
-          </div>
-
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600">
-            <div className="flex items-center gap-2 font-bold text-slate-900 mb-1">
-              <Globe className="w-4 h-4 text-teal-600" />
-              <span>Multilingual Translation Support</span>
             </div>
-            Clinical knowledge bases and triage follow-ups are automatically translated to ensure medical terminology is accessible and culturally clear.
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(false)}
+                className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setSavedToast(true);
+                  setTimeout(() => setSavedToast(false), 2000);
+                }}
+                className="px-4 py-2 text-xs font-medium bg-[#065f46] text-white rounded-xl"
+              >
+                Update
+              </button>
+            </div>
           </div>
-        </Card>
+        </div>
       )}
     </div>
   );

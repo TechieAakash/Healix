@@ -10,7 +10,6 @@ import {
   PhoneCall,
   Activity,
   ArrowRight,
-  ExternalLink,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -62,7 +61,7 @@ export function TriageStatusModal({ isOpen, onClose, latestAssessment }) {
         {/* Top Status Banner */}
         <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200/80 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-xl bg-teal-600 text-white shrink-0 mt-0.5">
+            <div className="p-2.5 rounded-xl bg-teal-700 text-white shrink-0 mt-0.5">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
@@ -114,7 +113,7 @@ export function TriageStatusModal({ isOpen, onClose, latestAssessment }) {
                     </div>
                   </div>
                   <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                    <span className="text-slate-400">Filter Status:</span>
+                    <span className="text-slate-500">Filter Status:</span>
                     <span className="text-emerald-700 font-semibold flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                       {p.status}
@@ -127,20 +126,20 @@ export function TriageStatusModal({ isOpen, onClose, latestAssessment }) {
         </div>
 
         {/* Emergency Hotline Quick Access */}
-        <div className="p-4 bg-rose-50/70 border border-rose-200 rounded-2xl space-y-2">
+        <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-2xl space-y-2">
           <div className="flex items-center gap-2">
-            <AlertOctagon className="w-4 h-4 text-rose-600" />
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-900">
+            <AlertOctagon className="w-4 h-4 text-teal-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-teal-900">
               Emergency Care Protocol (Priority Override)
             </span>
           </div>
-          <p className="text-xs text-rose-950 leading-relaxed">
+          <p className="text-xs text-teal-950 leading-relaxed">
             If you or someone near you experiences crushing chest pain, difficulty speaking, severe breathing trouble, or sudden fainting, call emergency responders immediately:
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
             <a
               href="tel:911"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition-colors shadow-2xs"
             >
               <PhoneCall className="w-3.5 h-3.5" />
               Dial 911 (US/Canada)

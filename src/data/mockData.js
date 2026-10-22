@@ -2,14 +2,31 @@
 
 export const mockUser = {
   id: "usr_99814",
-  name: "Aakash",
-  fullName: "Aakash Sharma",
-  email: "aakash@example.com",
-  dateOfBirth: "1996-08-14",
+  name: "Krrish",
+  fullName: "Krish Alagh",
+  email: "krish@example.com",
+  dateOfBirth: "15 Jan 2006",
   gender: "Male",
   bloodGroup: "O+",
+  height: "178 cm",
+  weight: "72 kg",
+  avatarInitials: "KA",
+  metrics: {
+    heartRate: "72 bpm",
+    heartRateRange: "Normal range: 60 - 100",
+    spo2: "98%",
+    spo2Range: "Normal range: 95 - 100",
+    sleep: "7h 42m",
+    sleepSub: "Last night",
+    steps: "8,432",
+    stepsSub: "Today",
+    weight: "72 kg",
+    healthScore: 82,
+    healthStatus: "Good",
+    healthNote: "Your health is on track!"
+  },
   emergencyContact: {
-    name: "Priya Sharma",
+    name: "Priya Alagh",
     relation: "Sister",
     phone: "+1 (555) 349-8821"
   },

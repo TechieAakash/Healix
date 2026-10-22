@@ -40,6 +40,24 @@ def chunk_document(
     # Split into sentences using punctuation boundaries
     sentence_regex = r"(?<=[.!?])\s+"
     sentences = [s.strip() for s in re.split(sentence_regex, raw_content) if s.strip()]
+    bounded_sentences = []
+    for sentence in sentences:
+        if len(sentence) <= target_chunk_size:
+            bounded_sentences.append(sentence)
+            continue
+        # Keep the configured chunk ceiling even when a source contains a
+        # very long sentence, splitting only at word boundaries.
+        words, fragment = sentence.split(), []
+        for word in words:
+            candidate = " ".join(fragment + [word])
+            if fragment and len(candidate) > target_chunk_size:
+                bounded_sentences.append(" ".join(fragment))
+                fragment = [word]
+            else:
+                fragment.append(word)
+        if fragment:
+            bounded_sentences.append(" ".join(fragment))
+    sentences = bounded_sentences
 
     chunks = []
     current_sentences = []
@@ -68,13 +86,8 @@ def chunk_document(
                 },
             })
             chunk_idx += 1
-            # Retain last sentence for overlap if helpful
-            if overlap_chars > 0 and len(current_sentences[-1]) <= overlap_chars:
-                current_sentences = [current_sentences[-1], sentence]
-                current_len = len(current_sentences[0]) + sent_len + 1
-            else:
-                current_sentences = [sentence]
-                current_len = sent_len
+            current_sentences = [sentence]
+            current_len = sent_len
         else:
             current_sentences.append(sentence)
             current_len += sent_len + 1

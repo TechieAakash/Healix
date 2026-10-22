@@ -14,7 +14,7 @@ export function SuggestedQuestions({ onSelectQuestion, questions = [] }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-        <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+        <Sparkles className="w-3.5 h-3.5 text-teal-700" />
         <span>Suggested clinical questions:</span>
       </div>
       <div className="flex flex-wrap gap-2">

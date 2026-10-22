@@ -1,551 +1,712 @@
-import React, { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { ProgressStepper } from "../components/symptom-checker/ProgressStepper";
-import { BodyAreaSelector } from "../components/symptom-checker/BodyAreaSelector";
-import { SafetyRedFlagModal } from "../components/symptom-checker/SafetyRedFlagModal";
-import { AnalysisLoadingStep } from "../components/symptom-checker/AnalysisLoadingStep";
-import { Button } from "../components/common/Button";
-import { Card } from "../components/common/Card";
-import { Badge } from "../components/common/Badge";
-import { TextArea, Input } from "../components/common/FormControls";
-import { commonSymptomChips } from "../data/mockData";
-import { symptomService } from "../services/symptomService";
-import { assessmentService } from "../services/assessmentService";
+import React, { useState } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import {
-  Mic,
-  MicOff,
-  Plus,
-  X,
+  Stethoscope,
   ArrowRight,
-  ArrowLeft,
   ShieldAlert,
-  ShieldCheck,
-  HelpCircle,
-  Sparkles,
-  CheckCircle2,
-  Calendar,
-  Activity,
-  Layers,
+  AlertTriangle,
+  RotateCcw,
+  Loader2,
+  FileText,
+  LogIn,
+  ChevronRight,
 } from "lucide-react";
+import { assessmentService } from "../services/assessmentService";
+import { authService } from "../services/authService";
+import { UrgencyIndicator } from "../components/common/UrgencyIndicator";
+import { Button } from "../components/common/Button";
+
+const COMMON_SYMPTOM_OPTIONS = [
+  "Headache",
+  "Fever",
+  "Cough",
+  "Sore Throat",
+  "Stomach Pain",
+  "Fatigue",
+  "Shortness of Breath",
+  "Chest Discomfort",
+  "Dizziness",
+  "Body Aches",
+  "Skin Rash",
+  "Nausea",
+];
+
+const BODY_AREAS = [
+  { id: "head", label: "Head & Neck" },
+  { id: "chest", label: "Chest & Respiratory" },
+  { id: "abdomen", label: "Stomach & Abdomen" },
+  { id: "musculoskeletal", label: "Arms, Legs & Back" },
+  { id: "skin", label: "Skin & General" },
+];
 
 export function SymptomCheckerPage() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const isAuthenticated = authService.isAuthenticated();
 
-  // Current Step: 1 = Symptoms, 2 = Details, 3 = Follow-up, 4 = Analysis
-  const [currentStep, setCurrentStep] = useState(1);
+  // Inputs: initialize with URL query parameter ?initial=... or saved draft if present
+  const [symptomText, setSymptomText] = useState(() => {
+    const draft = assessmentService.getDraftLocally();
+    return searchParams.get("initial") || (draft ? draft.description || "" : "");
+  });
+  const [selectedChips, setSelectedChips] = useState(() => {
+    const draft = assessmentService.getDraftLocally();
+    return draft && Array.isArray(draft.symptoms) ? draft.symptoms : [];
+  });
+  const [bodyArea, setBodyArea] = useState(() => {
+    const draft = assessmentService.getDraftLocally();
+    return draft?.bodyArea || "head";
+  });
+  const [severity, setSeverity] = useState(() => {
+    const draft = assessmentService.getDraftLocally();
+    return draft?.severity || 5;
+  });
+  const [duration, setDuration] = useState(() => {
+    const draft = assessmentService.getDraftLocally();
+    return draft?.duration || "1-3 days";
+  });
 
-  // Assessment Form State
-  const [freeText, setFreeText] = useState(searchParams.get("initial") || "");
-  const [selectedChips, setSelectedChips] = useState([
-    { id: "headache", label: "Headache" },
-    { id: "fatigue", label: "Fatigue" },
-  ]);
-  const [customSymptomInput, setCustomSymptomInput] = useState("");
-  const [showAddCustom, setShowAddCustom] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-
-  // Step 2 Details
-  const [onset, setOnset] = useState("Few days");
-  const [severity, setSeverity] = useState("Mild");
-  const [frequency, setFrequency] = useState("Comes and goes");
-  const [bodyArea, setBodyArea] = useState("head");
-
-  // Step 3 Follow-up Questions State
+  // Workflow states: 'input' | 'questions' | 'analyzing' | 'result' | 'error' | 'auth_required'
+  const [stage, setStage] = useState("input");
+  const [assessmentId, setAssessmentId] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-
-  // Safety Red Flag State
-  const [isRedFlagDetected, setIsRedFlagDetected] = useState(false);
-  const [redFlagReason, setRedFlagReason] = useState("");
-  const [matchedTriggers, setMatchedTriggers] = useState([]);
-
-  const steps = [
-    { label: "Symptoms" },
-    { label: "Details" },
-    { label: "Follow-up" },
-    { label: "Analysis" },
-    { label: "Results" },
-  ];
-
-  // Perform continuous safety red-flag triage checks
-  const performTriageSafetyCheck = (text, chips) => {
-    const check = symptomService.checkForRedFlags(text, chips);
-    if (check.isEmergency) {
-      setIsRedFlagDetected(true);
-      setRedFlagReason(check.reason);
-      setMatchedTriggers(check.matchedTriggers);
-    }
-  };
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleToggleChip = (chip) => {
-    const exists = selectedChips.find((c) => c.id === chip.id);
-    let updated;
-    if (exists) {
-      updated = selectedChips.filter((c) => c.id !== chip.id);
+    if (selectedChips.includes(chip)) {
+      setSelectedChips(selectedChips.filter((c) => c !== chip));
     } else {
-      updated = [...selectedChips, chip];
-    }
-    setSelectedChips(updated);
-    performTriageSafetyCheck(freeText, updated);
-  };
-
-  const handleAddCustomSymptom = (e) => {
-    e.preventDefault();
-    if (!customSymptomInput.trim()) return;
-    const newChip = {
-      id: `custom_${Date.now()}`,
-      label: customSymptomInput.trim(),
-    };
-    const updated = [...selectedChips, newChip];
-    setSelectedChips(updated);
-    setCustomSymptomInput("");
-    setShowAddCustom(false);
-    performTriageSafetyCheck(freeText, updated);
-  };
-
-  const toggleVoiceRecording = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      setTimeout(() => {
-        setFreeText((prev) =>
-          prev
-            ? `${prev}. I've also had a dull headache behind my eyes since yesterday morning.`
-            : "I've had a headache since yesterday and feel tired."
-        );
-        setIsRecording(false);
-      }, 1900);
-    } else {
-      setIsRecording(false);
+      setSelectedChips([...selectedChips, chip]);
     }
   };
 
-  // Step 1 -> Step 2 validation
-  const handleProceedToDetails = () => {
-    if (!freeText.trim() && selectedChips.length === 0) {
-      alert("Please describe what you are experiencing or select at least one symptom.");
+  const saveCurrentDraft = () => {
+    assessmentService.saveDraftLocally({
+      description: symptomText.trim(),
+      symptoms: selectedChips,
+      bodyArea,
+      severity,
+      duration,
+    });
+  };
+
+  const handleStartAssessment = async (e) => {
+    if (e) e.preventDefault();
+    const query = symptomText.trim();
+    if (!query && selectedChips.length === 0) {
+      setErrorMessage("Please describe your symptoms or select at least one symptom option.");
       return;
     }
-    performTriageSafetyCheck(freeText, selectedChips);
-    setCurrentStep(2);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
 
-  // Step 2 -> Step 3 follow-up generation
-  const handleProceedToFollowUp = async () => {
-    const generated = await symptomService.generateFollowUpQuestions({
-      primarySymptoms: selectedChips,
-      bodyArea,
-      description: freeText,
-      severity,
-    });
-    setQuestions(generated);
-    setCurrentQuestionIndex(0);
-    setCurrentStep(3);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+    setErrorMessage("");
 
-  // Step 3 answers
-  const handleAnswerQuestion = (val) => {
-    const currentQ = questions[currentQuestionIndex];
-    if (!currentQ) return;
-
-    // Check if user answered Yes to critical red-flag question
-    if (currentQ.isCriticalSafety && val === "Yes") {
-      setIsRedFlagDetected(true);
-      setRedFlagReason("Positive confirmation of potential acute warning sign.");
-      setMatchedTriggers([currentQ.question]);
+    // If user is not authenticated, save draft and prompt sign in
+    if (!authService.isAuthenticated()) {
+      saveCurrentDraft();
+      setStage("auth_required");
+      return;
     }
 
-    setAnswers((prev) => ({ ...prev, [currentQ.id]: val }));
+    setIsSubmitting(true);
+    try {
+      // Step 1: Create real assessment session on FastAPI backend
+      const initRes = await assessmentService.createAssessment({
+        description: query,
+        // The backend creates structured records from symptom_data. Sending
+        // chip names in both fields previously persisted every selected item twice.
+        symptoms: [],
+        symptom_data: selectedChips.map((name) => ({
+          name,
+          severity,
+          body_location: bodyArea,
+          duration,
+        })),
+      });
 
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-    } else {
-      // Proceed to Step 4 Analysis
-      setCurrentStep(4);
+      // Clear draft upon successful creation
+      assessmentService.clearDraftLocally();
+
+      const newId = initRes.assessment_id;
+      setAssessmentId(newId);
+
+      // Step 2: Request adaptive follow-up questions
+      const generatedQuestions = await assessmentService.getFollowUpQuestions(newId);
+      if (generatedQuestions && generatedQuestions.length > 0) {
+        setQuestions(generatedQuestions);
+        setStage("questions");
+      } else {
+        // Direct analysis if no further follow-up required
+        await executeAnalysis(newId);
+      }
+    } catch (err) {
+      if (err.isUnauthorized) {
+        // A token can be present in local storage after the backend session has
+        // expired. Preserve the intake before sending the user through login so
+        // that the checker resumes with the same symptoms afterward.
+        saveCurrentDraft();
+        setErrorMessage("Please sign in to complete a personalized clinical assessment.");
+        setStage("auth_required");
+      } else {
+        setErrorMessage(err.message || "Failed to initialize symptom assessment. Please try again.");
+        setStage("error");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Step 4 Complete -> Navigate to results
-  const handleAnalysisComplete = async () => {
-    const result = await assessmentService.analyzeAssessment({
-      description: freeText,
-      structuredSymptoms: selectedChips,
-      bodyArea,
-      duration: onset,
-      severity,
-      frequency,
-      answers,
-      hasRedFlags: isRedFlagDetected,
-    });
-    navigate(`/assessment/${result.id}`);
+  const handleAnswerChange = (questionId, value) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+  };
+
+  const handleSubmitAnswersAndAnalyze = async () => {
+    if (!assessmentId) return;
+    const unanswered = questions.filter((question) => !String(answers[question.id] || "").trim());
+    if (unanswered.length) {
+      setErrorMessage("Please answer each question or choose ‘Not sure’ to continue.");
+      return;
+    }
+    setIsSubmitting(true);
+    setErrorMessage("");
+    try {
+      // Submit each answered question to backend
+      for (const [qId, ans] of Object.entries(answers)) {
+        if (ans) {
+          await assessmentService.submitAnswer(assessmentId, qId, ans);
+        }
+      }
+      const nextQuestions = await assessmentService.getFollowUpQuestions(assessmentId);
+      if (nextQuestions.length > 0) {
+        setQuestions(nextQuestions);
+        setAnswers({});
+      } else {
+        await executeAnalysis(assessmentId);
+      }
+    } catch (err) {
+      console.error("[SymptomChecker] Analysis execution failed:", err);
+      if (err.isUnauthorized) {
+        saveCurrentDraft();
+        setErrorMessage("Your session expired. Sign in again to continue the assessment.");
+        setStage("auth_required");
+      } else {
+        setErrorMessage(err.message || "Triage analysis could not be completed.");
+        setStage("error");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const executeAnalysis = async (targetId) => {
+    setStage("analyzing");
+    try {
+      const res = await assessmentService.analyzeAssessment(targetId);
+      setAnalysisResult(res);
+      setStage("result");
+    } catch (err) {
+      console.error("[SymptomChecker] Analysis error:", err);
+      if (err.isUnauthorized) {
+        saveCurrentDraft();
+        setErrorMessage("Your session expired. Sign in again to continue the assessment.");
+        setStage("auth_required");
+      } else {
+        setErrorMessage(err.message || "Unable to complete safety triage analysis.");
+        setStage("error");
+      }
+    }
+  };
+
+  const handleReset = () => {
+    setStage("input");
+    setAssessmentId(null);
+    setQuestions([]);
+    setAnswers({});
+    setAnalysisResult(null);
+    setErrorMessage("");
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-4 sm:py-8 px-4 sm:px-6">
-      {/* Progress Stepper */}
-      <ProgressStepper steps={steps} currentStep={currentStep} />
+    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+      {/* Page Title & Medical Notice */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+            <Stethoscope className="w-7 h-7 text-emerald-700" />
+            Symptom Checker
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          Python-based safety triage and clear next-step health information.
+          </p>
+        </div>
 
-      {/* Safety Red Flag Modal */}
-      <SafetyRedFlagModal
-        isOpen={isRedFlagDetected}
-        onProceedAnyway={() => setIsRedFlagDetected(false)}
-        detectedReason={redFlagReason}
-        matchedTriggers={matchedTriggers}
-      />
+        {!isAuthenticated && (
+          <Link to="/login" className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition-colors">
+            <LogIn className="w-3.5 h-3.5" />
+            Sign in to save assessment history
+          </Link>
+        )}
+      </div>
 
-      {/* ================= STEP 1: SYMPTOMS ================= */}
-      {currentStep === 1 && (
-        <div className="space-y-6">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              What are you experiencing?
-            </h1>
-            <p className="text-sm text-slate-500">
-              Describe your symptoms in your own words or select from common health indicators below.
+      {/* Main Interactive Stage */}
+      {stage === "input" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Form */}
+          <div className="lg:col-span-2 bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/80 shadow-xs space-y-6">
+            <form onSubmit={handleStartAssessment} className="space-y-5">
+              {/* Narrative description */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                  What are you experiencing? <span className="text-emerald-700">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={symptomText}
+                  onChange={(e) => setSymptomText(e.target.value)}
+                  placeholder="Describe your symptoms in natural language (e.g. 'Dull temple headache since yesterday, feels worse when looking at computer screen')..."
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                />
+              </div>
+
+              {/* Symptom Chips */}
+              <div className="space-y-2.5">
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Select related symptoms (optional)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {COMMON_SYMPTOM_OPTIONS.map((symptom) => {
+                    const isSelected = selectedChips.includes(symptom);
+                    return (
+                      <button
+                        key={symptom}
+                        type="button"
+                        onClick={() => handleToggleChip(symptom)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-emerald-50 border-emerald-600 text-emerald-900 font-semibold shadow-2xs"
+                            : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        {symptom}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Body Area & Duration */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Primary Body Area
+                  </label>
+                  <select
+                    value={bodyArea}
+                    onChange={(e) => setBodyArea(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 text-slate-800 bg-white focus:outline-none focus:border-emerald-700"
+                  >
+                    {BODY_AREAS.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Duration
+                  </label>
+                  <select
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 text-slate-800 bg-white focus:outline-none focus:border-emerald-700"
+                  >
+                    <option value="Less than 24 hours">Less than 24 hours</option>
+                    <option value="1-3 days">1 to 3 days</option>
+                    <option value="4-7 days">4 to 7 days</option>
+                    <option value="More than a week">More than a week</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Severity Scale */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1.5">
+                  <span>Discomfort Severity</span>
+                  <span className="text-emerald-800 font-bold">{severity} / 10 ({severity >= 8 ? "Severe" : severity >= 4 ? "Moderate" : "Mild"})</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={severity}
+                  onChange={(e) => setSeverity(Number(e.target.value))}
+                  className="w-full accent-emerald-700 h-2 bg-slate-200 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              {errorMessage && (
+                <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-[#065f46] hover:bg-[#064e3b] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Initializing Assessment...
+                    </>
+                  ) : (
+                    <>
+                      Check Symptoms
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Info Box */}
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Safety First Protocol
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Healix immediately checks for acute red-flag symptoms such as sudden severe chest pressure, slurred speech, or breathing distress.
+              </p>
+              <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-500 border border-slate-100 leading-relaxed">
+                <strong>Notice:</strong> This application provides health information and triage guidance, not clinical medical diagnosis.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stage: Follow-up Questions */}
+      {stage === "questions" && (
+        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 max-w-2xl mx-auto">
+          <div className="space-y-1">
+            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+              Step 2: Follow-up Questions
+            </span>
+            <h2 className="text-lg font-bold text-slate-900 pt-1">
+              Please answer a few brief clarifying questions
+            </h2>
+            <p className="text-xs text-slate-500">
+              These details help our deterministic triage engine refine clinical context.
             </p>
           </div>
 
-          <Card padding="default" className="shadow-sm space-y-6">
-            {/* Free-text input with Voice Input button */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-slate-800">
-                  Describe symptoms in your own words:
-                </label>
-                <button
-                  type="button"
-                  onClick={toggleVoiceRecording}
-                  className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
-                    isRecording
-                      ? "bg-rose-100 text-rose-700 animate-pulse"
-                      : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                  }`}
-                >
-                  {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                  <span>{isRecording ? "Listening..." : "Voice Input"}</span>
-                </button>
-              </div>
-
-              <TextArea
-                rows={4}
-                placeholder="E.g., I've had a headache since yesterday and feel tired..."
-                value={freeText}
-                onChange={(e) => {
-                  setFreeText(e.target.value);
-                  performTriageSafetyCheck(e.target.value, selectedChips);
-                }}
-                className="text-base"
-              />
-              <p className="text-[11px] text-slate-400">
-                Tip: Mention when it started, what it feels like, or any related sensations.
-              </p>
-            </div>
-
-            {/* Structured Symptoms Chips */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Quick Select & Structured Symptoms:
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowAddCustom(true)}
-                  className="text-xs text-teal-700 hover:text-teal-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add custom symptom
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {commonSymptomChips.map((chip) => {
-                  const isSelected = selectedChips.some((c) => c.id === chip.id);
-                  return (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      onClick={() => handleToggleChip(chip)}
-                      className={`text-xs px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium flex items-center gap-1.5 ${
-                        isSelected
-                          ? "bg-teal-600 border-teal-600 text-white shadow-xs"
-                          : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
-                      }`}
-                    >
-                      {isSelected && <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />}
-                      <span>{chip.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Add Custom Symptom input modal/bar */}
-              {showAddCustom && (
-                <form
-                  onSubmit={handleAddCustomSymptom}
-                  className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-2"
-                >
+          <div className="space-y-5 divide-y divide-slate-100">
+            {questions.map((q, idx) => (
+              <div key={q.id} className="pt-4 first:pt-0 space-y-2.5">
+                <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                  {idx + 1}. {q.question}
+                </p>
+                {q.reasoning && (
+                  <p className="text-[11px] leading-relaxed text-slate-500">
+                    Why we ask: {q.reasoning}
+                  </p>
+                )}
+                {q.options && q.options.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {q.options.map((opt) => (
+                      <label
+                        key={opt}
+                        className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-colors ${
+                          answers[q.id] === opt
+                            ? "bg-emerald-50 border-emerald-600 text-emerald-950 font-medium"
+                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={`q_${q.id}`}
+                          value={opt}
+                          checked={answers[q.id] === opt}
+                          onChange={() => handleAnswerChange(q.id, opt)}
+                          className="accent-emerald-700"
+                        />
+                        <span>{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
                   <input
                     type="text"
-                    placeholder="Enter symptom name (e.g. ringing in ears)..."
-                    value={customSymptomInput}
-                    onChange={(e) => setCustomSymptomInput(e.target.value)}
-                    className="flex-1 text-xs bg-white border border-slate-200 rounded-lg px-3 py-1.5 outline-none focus:border-teal-600"
-                    autoFocus
+                    value={answers[q.id] || ""}
+                    onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                    placeholder="Your answer..."
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 text-slate-900"
                   />
-                  <Button variant="teal" size="sm" type="submit">
-                    Add
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddCustom(false)}
-                    className="p-1.5 text-slate-400 hover:text-slate-700"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </form>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {errorMessage && (
+            <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
+              {errorMessage}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+            >
+              Start Over
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmitAnswersAndAnalyze}
+              disabled={isSubmitting}
+              className="px-6 py-2.5 bg-[#065f46] hover:bg-[#064e3b] text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2 disabled:opacity-60"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Save Answers & Continue
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Stage: Analyzing Animation */}
+      {stage === "analyzing" && (
+        <div className="bg-white rounded-2xl p-12 border border-slate-200/80 shadow-xs text-center space-y-4 max-w-lg mx-auto">
+          <Loader2 className="w-10 h-10 text-emerald-700 animate-spin mx-auto" />
+          <h3 className="text-base font-bold text-slate-900">
+            Evaluating Symptoms & Safety Rules
+          </h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Applying deterministic safety rules and preparing general next-step guidance...
+          </p>
+        </div>
+      )}
+
+      {/* Stage: Result */}
+      {stage === "result" && analysisResult && (
+        <div className="space-y-6 animate-in fade-in max-w-4xl mx-auto">
+          {/* Urgency Indicator Card */}
+          <UrgencyIndicator
+            level={analysisResult.urgency_level}
+            description={analysisResult.summary}
+          />
+
+          {/* Detailed Observations */}
+          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                  Retrieved Health Information
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Educational passages selected from Healix’s local health reference library. They are not diagnoses.
+                </p>
+              </div>
+
+              {assessmentId && (
+                <Link
+                  to={`/assessment/${assessmentId}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-semibold hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  View Full Clinical Brief
+                </Link>
               )}
             </div>
 
-            {/* Next Step Action */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-400">
-                Step 1 of 5 • Safety triage active
-              </span>
-              <Button
-                variant="teal"
-                size="md"
-                onClick={handleProceedToDetails}
-                icon={ArrowRight}
-                iconPosition="right"
-              >
-                Continue to Details
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* ================= STEP 2: SYMPTOM DETAILS ================= */}
-      {currentStep === 2 && (
-        <div className="space-y-6">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Symptom Details & Location
-            </h1>
-            <p className="text-sm text-slate-500">
-              Providing timeline and anatomical context helps refine informational matching.
-            </p>
-          </div>
-
-          <Card padding="default" className="shadow-sm space-y-8">
-            {/* Timeline: When did it start? */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-teal-600" />
-                When did it start?
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {["Today", "Few days", "1–2 weeks", "More than 2 weeks"].map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setOnset(opt)}
-                    className={`p-3 rounded-xl border text-xs font-semibold text-center transition-all cursor-pointer ${
-                      onset === opt
-                        ? "border-teal-600 bg-teal-50 text-teal-900 ring-2 ring-teal-500/20 shadow-xs"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Severity: Mild, Moderate, Severe */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-teal-600" />
-                Severity level:
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: "Mild", desc: "Noticeable but easily tolerated" },
-                  { label: "Moderate", desc: "Interferes with normal tasks" },
-                  { label: "Severe", desc: "Incapacitating or unbearable" },
-                ].map((sev) => (
-                  <button
-                    key={sev.label}
-                    type="button"
-                    onClick={() => {
-                      setSeverity(sev.label);
-                      if (sev.label === "Severe") {
-                        performTriageSafetyCheck("severe pain", selectedChips);
-                      }
-                    }}
-                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      severity === sev.label
-                        ? "border-teal-600 bg-teal-50 text-teal-900 ring-2 ring-teal-500/20 shadow-xs"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                    }`}
-                  >
-                    <p className="text-xs font-bold">{sev.label}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{sev.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Frequency: Constant, Occasional, Comes and goes */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-teal-600" />
-                Frequency:
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {["Constant", "Occasional", "Comes and goes"].map((freq) => (
-                  <button
-                    key={freq}
-                    type="button"
-                    onClick={() => setFrequency(freq)}
-                    className={`p-3 rounded-xl border text-xs font-semibold text-center transition-all cursor-pointer ${
-                      frequency === freq
-                        ? "border-teal-600 bg-teal-50 text-teal-900 ring-2 ring-teal-500/20 shadow-xs"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                    }`}
-                  >
-                    {freq}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Location: Body-area selector */}
-            <div className="space-y-3 pt-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                Primary Body Location:
-              </label>
-              <BodyAreaSelector
-                selectedArea={bodyArea}
-                onSelectArea={(area) => setBodyArea(area)}
-              />
-            </div>
-
-            {/* Navigation buttons */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => setCurrentStep(1)}
-                icon={ArrowLeft}
-              >
-                Back to Symptoms
-              </Button>
-              <Button
-                variant="teal"
-                size="md"
-                onClick={handleProceedToFollowUp}
-                icon={ArrowRight}
-                iconPosition="right"
-              >
-                Continue to Follow-up
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* ================= STEP 3: FOLLOW-UP QUESTIONS ================= */}
-      {currentStep === 3 && (
-        <div className="space-y-6">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <Badge variant="teal">Intake Clarification</Badge>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              A few follow-up questions
-            </h1>
-            <p className="text-sm text-slate-500">
-              Healix asks targeted questions to better understand clinical warning indicators.
-            </p>
-          </div>
-
-          {questions.length > 0 && (
-            <Card padding="lg" className="shadow-md space-y-8">
-              {/* Question progress counter */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-teal-700">
-                  Question {currentQuestionIndex + 1} of {questions.length}
-                </span>
-                <span className="text-xs text-slate-400">
-                  {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% completed
-                </span>
-              </div>
-
-              {/* Conversational Prompt */}
-              <div className="space-y-4">
-                <div className="p-4 bg-teal-50/70 rounded-2xl border border-teal-100 text-teal-950 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0">
-                    <Sparkles className="w-4 h-4" />
+            {/* Possible explanations */}
+            {analysisResult.possible_explanations && analysisResult.possible_explanations.length > 0 && (
+              <div className="space-y-3">
+                {analysisResult.possible_explanations.map((exp, idx) => (
+                  <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-slate-900 text-sm">{exp.title}</h4>
+                      {exp.match_level && (
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 font-semibold rounded text-[10px]">
+                          {exp.match_level}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-600 leading-relaxed">{exp.description}</p>
                   </div>
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-teal-700">
-                      Healix Assistant:
-                    </span>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-1">
-                      {questions[currentQuestionIndex]?.question}
-                    </h3>
-                    {questions[currentQuestionIndex]?.hint && (
-                      <p className="text-xs text-teal-900 mt-1 leading-relaxed">
-                        {questions[currentQuestionIndex]?.hint}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                ))}
+              </div>
+            )}
+            {(!analysisResult.possible_explanations || analysisResult.possible_explanations.length === 0) && (
+              <p className="rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs text-slate-600">
+                No relevant reference passage was available for these symptoms. Add the symptoms, how long they have been present, and how severe they feel. Safety guidance below still reflects the deterministic urgency review.
+              </p>
+            )}
 
-                {/* Yes, No, Not sure response buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
-                  {["Yes", "No", "Not sure"].map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => handleAnswerQuestion(option)}
-                      className="p-4 rounded-xl border border-slate-200 bg-white hover:border-teal-600 hover:bg-teal-50/40 text-slate-800 font-bold text-sm text-center transition-all cursor-pointer shadow-xs active:scale-[0.98]"
-                    >
-                      {option}
-                    </button>
+            {/* Warning signs & Red flags */}
+            {analysisResult.warning_signs && analysisResult.warning_signs.length > 0 && (
+              <div className="p-4 bg-amber-50/80 rounded-2xl border border-amber-200/80 space-y-2 text-xs">
+                <h4 className="font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  Warning Signs to Monitor
+                </h4>
+                <ul className="space-y-1 text-slate-800 list-disc list-inside">
+                  {analysisResult.warning_signs.map((sign, idx) => (
+                    <li key={idx}>{sign}</li>
                   ))}
-                </div>
+                </ul>
               </div>
+            )}
 
-              {/* Navigation buttons */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    if (currentQuestionIndex > 0) {
-                      setCurrentQuestionIndex((prev) => prev - 1);
-                    } else {
-                      setCurrentStep(2);
-                    }
-                  }}
-                  icon={ArrowLeft}
-                >
-                  Back
-                </Button>
-                <span className="text-xs text-slate-400">
-                  Tap any option above to advance
-                </span>
+            {analysisResult.reasoning_trace?.length > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-2 text-xs">
+                <h4 className="font-bold text-amber-950">Why this was flagged</h4>
+                <ul className="space-y-2 text-slate-700">
+                  {analysisResult.reasoning_trace.map((item, idx) => (
+                    <li key={`${item.rule_id}-${idx}`}>
+                      <span className="font-semibold">{item.rule_id}:</span> {item.conclusion}
+                      <span className="block text-[11px] text-slate-500">
+                        Matched: {item.matched_facts.map((fact) => String(fact.value).replaceAll("_", " ")).join(", ")}. {item.source} ({item.reference})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </Card>
-          )}
+            )}
+
+            {analysisResult.condition_ranking?.length > 0 && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-3 text-xs">
+                <h4 className="font-bold text-emerald-950">Dataset pattern matches</h4>
+                <p className="text-slate-600">These are matches to synthetic DDXPlus examples, not diagnoses. The safety review above always controls urgency.</p>
+                <ol className="space-y-2">
+                  {analysisResult.condition_ranking.map((item, idx) => (
+                    <li key={`${item.condition}-${idx}`} className="flex items-center justify-between gap-3 rounded-lg bg-white/80 p-2.5">
+                      <span className="font-semibold text-slate-800">{idx + 1}. {item.condition}</span>
+                      <span className="shrink-0 text-emerald-800">{Math.round(item.probability * 100)}% dataset match · {item.confidence_band}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {/* General Self-Care Guidance */}
+            {analysisResult.general_guidance && analysisResult.general_guidance.length > 0 && (
+              <div className="space-y-2 text-xs">
+                <h4 className="font-bold text-slate-900 uppercase tracking-wider">
+                  Self-Care Next Steps
+                </h4>
+                <ul className="space-y-1.5 text-slate-700 list-disc list-inside">
+                  {analysisResult.general_guidance.map((g, idx) => (
+                    <li key={idx}>{g}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Disclaimer */}
+            <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-500 leading-relaxed border border-slate-200">
+              <strong>Medical Disclaimer:</strong> {analysisResult.disclaimer || "Healix is an informational triage tool, not a doctor. Please consult a licensed physician."}
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                New Symptom Check
+              </button>
+
+              {assessmentId && (
+                <Link to={`/assessment/${assessmentId}`}>
+                  <Button variant="primary" size="sm" icon={ChevronRight} iconPosition="right">
+                    Open Patient Summary Report
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ================= STEP 4: AI ANALYSIS LOADING ================= */}
-      {currentStep === 4 && (
-        <AnalysisLoadingStep onComplete={handleAnalysisComplete} />
+      {/* Stage: Auth Required */}
+      {stage === "auth_required" && (
+        <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center space-y-4 max-w-lg mx-auto shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
+            <LogIn className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">
+            Sign In to Process Assessment
+          </h3>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Your symptom notes and selections have been saved. Please sign in or register to securely process your clinical assessment and view personalized guidance.
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setStage("input")}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            >
+              Back to Draft
+            </button>
+            <Link to="/login?redirect=/symptoms">
+              <Button variant="primary" size="sm" icon={LogIn} iconPosition="left">
+                Sign In to Continue
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Stage: Error */}
+      {stage === "error" && (
+        <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center space-y-4 max-w-lg mx-auto">
+          <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">
+            Assessment Request Error
+          </h3>
+          <p className="text-xs text-slate-600">
+            {errorMessage || "An unexpected error occurred while communicating with the health assessment engine."}
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            >
+              Start Over
+            </button>
+            <button
+              onClick={handleStartAssessment}
+              className="px-4 py-2 bg-[#065f46] hover:bg-[#064e3b] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            >
+              Retry Check
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

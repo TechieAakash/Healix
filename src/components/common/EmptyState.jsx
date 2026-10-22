@@ -40,13 +40,13 @@ export function ErrorState({
 }) {
   return (
     <div
-      className={`flex flex-col items-center justify-center p-8 text-center bg-rose-50/50 rounded-2xl border border-rose-200 ${className}`}
+      className={`flex flex-col items-center justify-center p-8 text-center bg-teal-50/50 rounded-2xl border border-teal-200 ${className}`}
     >
-      <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
+      <div className="w-12 h-12 rounded-2xl bg-teal-100 text-teal-600 flex items-center justify-center mb-3">
         <AlertCircle className="w-6 h-6" />
       </div>
-      <h3 className="text-sm font-semibold text-rose-900">{title}</h3>
-      <p className="text-xs text-rose-700 mt-1 max-w-sm leading-relaxed">
+      <h3 className="text-sm font-semibold text-teal-900">{title}</h3>
+      <p className="text-xs text-teal-700 mt-1 max-w-sm leading-relaxed">
         {message}
       </p>
       {onRetry && (
@@ -56,7 +56,7 @@ export function ErrorState({
             size="sm"
             onClick={onRetry}
             icon={RefreshCw}
-            className="border-rose-200 text-rose-800 hover:bg-rose-50"
+            className="border-teal-200 text-teal-800 hover:bg-teal-50"
           >
             Retry
           </Button>

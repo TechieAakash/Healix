@@ -4,7 +4,7 @@ import { Card } from "../common/Card";
 import { StatusBadge } from "../common/StatusBadge";
 import { UrgencyIndicator } from "../common/UrgencyIndicator";
 import { Button } from "../common/Button";
-import { ArrowRight, Calendar, Stethoscope, ChevronRight, FileText } from "lucide-react";
+import { Calendar, Stethoscope, ChevronRight, FileText } from "lucide-react";
 
 export function AssessmentCard({ assessment, compact = false }) {
   if (!assessment) return null;
@@ -17,14 +17,14 @@ export function AssessmentCard({ assessment, compact = false }) {
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-teal-50 text-teal-700">
+          <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700">
             <Stethoscope className="w-4 h-4" />
           </div>
           <div>
             <h4 className="text-sm font-semibold text-slate-900 leading-tight">
               {assessment.primarySymptom || assessment.symptoms?.join(", ")}
             </h4>
-            <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-400">
+            <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 {assessment.date}
@@ -53,7 +53,7 @@ export function AssessmentCard({ assessment, compact = false }) {
 
       {/* Symptom Tags */}
       <div className="pt-3">
-        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
           Reported Symptoms:
         </p>
         <div className="flex flex-wrap gap-1.5">

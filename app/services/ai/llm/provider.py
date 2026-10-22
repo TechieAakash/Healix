@@ -908,16 +908,14 @@ def get_llm_provider(provider_type: Optional[str] = None) -> BaseLLMProvider:
     Factory to resolve LLM provider instance from settings or explicit argument.
     """
     selected = (provider_type or settings.AI_PROVIDER).lower()
-    if selected in ("mock", "test", "offline"):
+    if selected == "local":
+        from app.services.ai.llm.local_provider import LocalLLMProvider
+        return LocalLLMProvider()
+    if selected == "mock":
         return MockLLMProvider()
-    elif selected in ("gemini", "google"):
-        return GeminiLLMProvider()
-    elif selected in ("openai", "azure", "groq"):
+    elif selected == "openai":
+        if not settings.AI_API_KEY:
+            raise LLMProviderException("AI_API_KEY is required when AI_PROVIDER=openai", status_code=500)
         return OpenAILLMProvider()
-    elif selected == "generic_http":
-        return OpenAILLMProvider(base_url=settings.AI_BASE_URL)
-    elif settings.AI_API_KEY and (settings.AI_API_KEY.startswith("AQ.") or settings.AI_API_KEY.startswith("AIza")):
-        return GeminiLLMProvider()
     else:
-        # Default fallback to MockLLMProvider for offline/dev/safety
-        return MockLLMProvider()
+        raise ValueError(f"Unsupported AI provider: {selected}")

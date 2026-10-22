@@ -122,7 +122,7 @@ export function BodyAreaSelector({ selectedArea, onSelectArea }) {
             </svg>
 
             {/* Quick Helper Floating Badges */}
-            <div className="absolute bottom-2 text-center text-[11px] text-slate-400 font-medium">
+            <div className="absolute bottom-2 text-center text-[11px] text-slate-500 font-medium">
               Click any zone or list on the right
             </div>
           </div>
@@ -147,7 +147,7 @@ export function BodyAreaSelector({ selectedArea, onSelectArea }) {
               >
                 <div
                   className={`p-2 rounded-lg shrink-0 ${
-                    isSelected ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600"
+                    isSelected ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   <Icon className="w-4 h-4" />

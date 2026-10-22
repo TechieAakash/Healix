@@ -9,7 +9,6 @@ export function HealthMetricCard({
   subtitle,
   icon: Icon,
   badgeText,
-  badgeColor = "teal",
   className = "",
   onClick,
   to,
@@ -56,7 +55,7 @@ export function HealthMetricCard({
           )}
         </div>
         {Icon && (
-          <div className="p-3 bg-teal-50 text-teal-700 rounded-2xl border border-teal-100/80 group-hover:bg-teal-600 group-hover:text-white transition-all shadow-2xs">
+          <div className="p-3 bg-teal-50 text-teal-700 rounded-2xl border border-teal-100/80 group-hover:bg-teal-700 group-hover:text-white transition-all shadow-2xs">
             <Icon className="w-5 h-5" />
           </div>
         )}
@@ -67,7 +66,7 @@ export function HealthMetricCard({
           <span className="text-slate-500 font-medium group-hover:text-teal-700 transition-colors">
             {badgeText}
           </span>
-          <div className="w-6 h-6 rounded-full flex items-center justify-center bg-slate-50 group-hover:bg-teal-50 text-slate-400 group-hover:text-teal-600 transition-all">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center bg-slate-50 group-hover:bg-teal-50 text-slate-500 group-hover:text-teal-700 transition-all">
             <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </div>

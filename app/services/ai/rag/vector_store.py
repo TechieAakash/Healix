@@ -141,4 +141,26 @@ def get_vector_store() -> BaseVectorStore:
     global _global_vector_store
     if _global_vector_store is None:
         _global_vector_store = JsonPersistentVectorStore()
+        from app.services.ai.rag.embeddings import LightweightSemanticEmbeddingService
+        expected_dimension = LightweightSemanticEmbeddingService().dimension
+        stale_dimensions = any(len(doc.get("vector", [])) != expected_dimension for doc in _global_vector_store.documents.values())
+        if (not _global_vector_store.documents or stale_dimensions) and settings.AI_PROVIDER.lower() != "openai":
+            # Build the tiny, deterministic local index on first run. This uses
+            # the exact same chunking/vectorizer as the offline retriever.
+            try:
+                from app.services.ai.rag.knowledge_data import MEDICAL_KNOWLEDGE_DOCUMENTS
+                from app.services.ai.rag.document_loader import chunk_document
+                _global_vector_store.documents.clear()
+
+                embedder = LightweightSemanticEmbeddingService()
+                for document in MEDICAL_KNOWLEDGE_DOCUMENTS:
+                    for chunk in chunk_document(document):
+                        _global_vector_store.documents[chunk["chunk_id"]] = {
+                            **chunk,
+                            "vector": embedder._text_to_vector(chunk["text"]),
+                        }
+                _global_vector_store._persist()
+                logger.info("Built local medical knowledge index with %d chunks", len(_global_vector_store.documents))
+            except Exception:
+                logger.exception("Could not auto-build the local medical knowledge index")
     return _global_vector_store

@@ -63,6 +63,15 @@ class InvalidAssessmentStateException(HealixException):
         )
 
 
+class AnalysisFailedException(HealixException):
+    def __init__(self, message: str = "Triage analysis could not be completed."):
+        super().__init__(
+            code="ANALYSIS_FAILED",
+            message=message,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
 class RateLimitExceededException(HealixException):
     def __init__(self, limit_desc: str = "Too many requests. Please try again later."):
         super().__init__(

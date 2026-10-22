@@ -55,7 +55,14 @@ async def generate_report_for_assessment(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    report_service = ReportService(db)
+    try:
+        existing = report_service.get_by_assessment_id(assessment_id, current_user.id)
+        if existing:
+            return existing
+    except Exception:
+        pass
+
     assessment_service = AssessmentService(db)
     await assessment_service.analyze_assessment(assessment_id, current_user.id)
-    report_service = ReportService(db)
     return report_service.get_by_assessment_id(assessment_id, current_user.id)

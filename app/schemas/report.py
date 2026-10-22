@@ -28,6 +28,8 @@ class ReportResponse(BaseModel):
     general_guidance: List[str]
     warning_signs: List[str]
     sources: List[Any]
+    reasoning_trace: List[Dict[str, Any]] = []
+    condition_ranking: List[Any] = []
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
