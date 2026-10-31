@@ -1,0 +1,211 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+
+  /* Dark Mode — RGB triplets for Tailwind opacity compositing */
+  --bg-primary: 9 13 18;
+  --bg-surface: 18 25 34;
+  --bg-surface-elevated: 24 34 48;
+  --border-color: 51 65 85;
+  --border-strong: 71 85 105;
+  --text-primary: 241 245 249;
+  --text-muted: 148 163 184;
+  --accent-teal: 14 165 233;
+  --accent-mint: 16 185 129;
+  --accent-amber: 245 158 11;
+  --accent-rose: 244 63 94;
+  --pulse-indigo: 129 140 248;
+
+  /* Non-compositable helpers */
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-bg-focus: rgba(255, 255, 255, 0.08);
+  --modal-overlay: rgba(9, 13, 18, 0.80);
+  --glass-panel-bg: rgba(18, 25, 34, 0.78);
+  --glass-border: rgba(51, 65, 85, 0.55);
+  /* bg-carbon-glass helper — used by Navbar, footer, some panels */
+  --bg-glass-style: rgba(18, 25, 34, 0.72);
+  /* Subtle surface tint for cards that need slight distinction */
+  --surface-tint: rgba(255, 255, 255, 0.04);
+  --surface-tint-hover: rgba(255, 255, 255, 0.07);
+}
+
+html.light {
+  color-scheme: light;
+
+  /* Light Mode */
+  --bg-primary: 248 250 252;
+  --bg-surface: 255 255 255;
+  --bg-surface-elevated: 241 245 249;
+  --border-color: 203 213 225;
+  --border-strong: 148 163 184;
+  --text-primary: 15 23 42;
+  --text-muted: 100 116 139;
+  --accent-teal: 3 105 161;
+  --accent-mint: 5 150 105;
+  --accent-amber: 180 83 9;
+  --accent-rose: 190 18 60;
+  --pulse-indigo: 79 70 229;
+
+  --input-bg: rgba(255, 255, 255, 0.90);
+  --input-bg-focus: rgba(255, 255, 255, 1.00);
+  --modal-overlay: rgba(15, 23, 42, 0.60);
+  --glass-panel-bg: rgba(255, 255, 255, 0.90);
+  --glass-border: rgba(203, 213, 225, 0.90);
+  --bg-glass-style: rgba(255, 255, 255, 0.80);
+  --surface-tint: rgba(15, 23, 42, 0.04);
+  --surface-tint-hover: rgba(15, 23, 42, 0.07);
+}
+
+html.font-scale-sm  { font-size: 14px; }
+html.font-scale-base { font-size: 16px; }
+html.font-scale-lg  { font-size: 18px; }
+
+html.high-contrast {
+  --border-color: 255 255 255;
+  --border-strong: 255 255 255;
+  --text-muted: 226 232 240;
+}
+html.light.high-contrast {
+  --border-color: 0 0 0;
+  --border-strong: 0 0 0;
+  --text-muted: 30 41 59;
+}
+
+/* ── Base ───────────────────────────────────────────── */
+@layer base {
+  body {
+    background-color: rgb(var(--bg-primary));
+    color: rgb(var(--text-primary));
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  html {
+    background-color: rgb(var(--bg-primary));
+    transition: background-color 0.2s ease;
+  }
+
+  /* Universal input / select / textarea theming (excludes checkboxes and radio buttons) */
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    background-color: var(--input-bg) !important;
+    color: rgb(var(--text-primary)) !important;
+    border-color: rgb(var(--border-color)) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
+    background-color: var(--input-bg-focus) !important;
+    outline: none !important;
+    border-color: rgb(var(--accent-teal)) !important;
+    box-shadow: 0 0 0 2px rgba(var(--accent-teal) / 0.2) !important;
+  }
+  input::placeholder, textarea::placeholder {
+    color: rgb(var(--text-muted));
+    opacity: 0.65;
+  }
+  input[type="checkbox"], input[type="radio"] {
+    accent-color: rgb(var(--accent-teal));
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+  }
+  html.dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+  }
+  option {
+    background: rgb(var(--bg-surface));
+    color: rgb(var(--text-primary));
+  }
+}
+
+/* ── Reusable component helpers ──────────────────────── */
+.glass-panel {
+  background: var(--glass-panel-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* surface-card: replaces bg-carbon/40-60 — theme-aware subtle tinted surface with reliable border */
+.surface-card {
+  background: var(--surface-tint);
+  border: 1px solid rgb(var(--border-color) / 0.5);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.surface-card-hover {
+  background: var(--surface-tint);
+  border: 1px solid rgb(var(--border-color) / 0.5);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.surface-card-hover:hover {
+  background: var(--surface-tint-hover);
+  border-color: rgb(var(--border-strong) / 0.7);
+}
+
+.glass-panel-glow {
+  background: var(--glass-panel-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgb(var(--accent-teal) / 0.45);
+  box-shadow: 0 0 24px rgb(var(--accent-teal) / 0.12);
+}
+
+.glass-panel-alert {
+  background: rgb(var(--accent-rose) / 0.10);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgb(var(--accent-rose) / 0.45);
+  box-shadow: 0 0 24px rgb(var(--accent-rose) / 0.12);
+}
+
+.glass-panel-mint {
+  background: rgb(var(--accent-mint) / 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgb(var(--accent-mint) / 0.40);
+  box-shadow: 0 0 24px rgb(var(--accent-mint) / 0.10);
+}
+
+/* Modal overlay */
+.modal-overlay {
+  background-color: var(--modal-overlay);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ── Scrollbars ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border-color) / 0.55);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--accent-teal)); }
+
+/* ── Focus ring (accessibility) ──────────────────────── */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgb(var(--accent-teal));
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ── Theme-aware recharts chart colors ───────────────── */
+.recharts-text { fill: rgb(var(--text-muted)) !important; }
+.recharts-cartesian-grid line { stroke: rgb(var(--border-color) / 0.45) !important; }
+
+/* ── Light mode extra surface depth ─────────────────── */
+html.light .glass-panel {
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+html.light .glass-panel-glow {
+  box-shadow: 0 2px 20px rgba(2, 132, 199, 0.15);
+}
+
+/* ── Dark mode glass depth ───────────────────────────── */
+html.dark .glass-panel {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.32);
+}
